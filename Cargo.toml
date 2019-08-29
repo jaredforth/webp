@@ -1,0 +1,13 @@
+[package]
+name = "webp"
+version = "0.0.0"
+authors = ["Jared Forth <jaredforthdev@gmail.com>"]
+edition = "2018"
+
+description = "WebP conversion library | comming soon"
+license = "GPL-3.0-or-later"
+
+homepage = "https://github.com/jaredforth/webp"
+repository = "https://github.com/jaredforth/webp.git"
+
+[dependencies]
