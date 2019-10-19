@@ -11,3 +11,9 @@ homepage = "https://github.com/jaredforth/webp"
 repository = "https://github.com/jaredforth/webp.git"
 
 [dependencies]
+libwebp-sys = "0.2.0"
+image = { version = "0.22.3", optional = true }
+
+[features]
+default = ["image-conversion"]
+image-conversion = [ "image" ]
