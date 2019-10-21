@@ -1,105 +1,79 @@
+use std::fmt::{Debug, Error, Formatter};
+
 use libwebp_sys::*;
 
-use std::ops::Deref;
+use crate::shared::{Channels, WebPImage};
 
-#[cfg(feature = "image-conversion")]
-use image::*;
-use std::fmt::{Debug, Formatter, Error};
-
-
-pub struct WebPImage<'a> {
-    features: BitstreamFeatures,
-    data: &'a mut [u8],
+pub struct Decoder<'a> {
+    data: &'a [u8],
 }
 
-impl<'a> WebPImage<'a> {
-    #[cfg(feature = "image-conversion")]
-    pub fn as_image(&self) -> DynamicImage {
-        if self.features.has_alpha() {
-            let image = ImageBuffer::from_raw(
-                self.features.width(),
-                self.features.height(),
-                self.data.to_owned(),
-            ).expect("ImageBuffer couldn't be created");
-
-            DynamicImage::ImageRgba8(image)
-        } else {
-            let image = ImageBuffer::from_raw(
-                self.features.width(),
-                self.features.height(),
-                self.data.to_owned(),
-            ).expect("ImageBuffer couldn't be created");
-
-            DynamicImage::ImageRgb8(image)
-        }
+impl<'a> Decoder<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        Self { data }
     }
 
-    pub fn from_data(data: &'a [u8]) -> Option<Self> {
-        let features = BitstreamFeatures::new(data)?;
+    pub fn decode(&self) -> Option<WebPImage> {
+        let features = BitstreamFeatures::new(self.data)?;
 
         if features.has_animation() {
-            unimplemented!()
+            return None;
         }
 
-        let data = unsafe { Self::decode(data, &features)? };
-
-        let image = Self {
-            features,
-            data,
-        };
-
-        Some(image)
-    }
-
-    unsafe fn decode(data: &'a [u8], features: &BitstreamFeatures) -> Option<&'a mut [u8]> {
         let width = features.width();
         let height = features.height();
         let pixel_count = width * height;
 
-        let mut width = width as i32;
-        let mut height = height as i32;
+        let image_ptr = unsafe {
+            let mut width = width as i32;
+            let mut height = height as i32;
 
-        let image_ptr = if features.has_alpha() {
-            WebPDecodeRGBA(
-                data.as_ptr(),
-                data.len(),
-                &mut width as *mut _,
-                &mut height as *mut _,
-            )
-        } else {
-            WebPDecodeRGB(
-                data.as_ptr(),
-                data.len(),
-                &mut width as *mut _,
-                &mut height as *mut _,
-            )
+            if features.has_alpha() {
+                WebPDecodeRGBA(
+                    self.data.as_ptr(),
+                    self.data.len(),
+                    &mut width as *mut _,
+                    &mut height as *mut _,
+                )
+            } else {
+                WebPDecodeRGB(
+                    self.data.as_ptr(),
+                    self.data.len(),
+                    &mut width as *mut _,
+                    &mut height as *mut _,
+                )
+            }
         };
 
         if image_ptr.is_null() {
             return None;
         }
 
-        if features.has_alpha() {
-            Some(std::slice::from_raw_parts_mut(image_ptr, 4 * pixel_count as usize))
+        let image = if features.has_alpha() {
+            let image = unsafe {
+                std::slice::from_raw_parts_mut(image_ptr, 4 * pixel_count as usize)
+            };
+
+            WebPImage::new(
+                image,
+                Channels::Rgba,
+                width,
+                height,
+            )
         } else {
-            Some(std::slice::from_raw_parts_mut(image_ptr, 3 * pixel_count as usize))
-        }
-    }
-}
+            let image = unsafe {
+                std::slice::from_raw_parts_mut(image_ptr, 3 * pixel_count as usize)
+            };
 
-impl<'a> Deref for WebPImage<'a> {
-    type Target = [u8];
+            WebPImage::new(
+                image,
+                Channels::Rgb,
+                width,
+                height,
+            )
+        };
 
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl<'a> Drop for WebPImage<'a> {
-    fn drop(&mut self) {
-        unsafe {
-            WebPFree(self.data.as_mut_ptr() as _)
-        }
+        Some(image)
     }
 }
 
