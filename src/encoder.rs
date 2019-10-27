@@ -1,3 +1,5 @@
+#[cfg(feature = "image-conversion")]
+use image::DynamicImage;
 use libwebp_sys::*;
 
 use crate::shared::*;
@@ -10,6 +12,26 @@ pub struct Encoder<'a> {
 }
 
 impl<'a> Encoder<'a> {
+    pub fn new(image: &'a [u8], color: Channels, width: u32, height: u32) -> Self {
+        Self { image, color, width, height }
+    }
+
+    #[cfg(feature = "image-conversion")]
+    pub fn from_image(image: &'a DynamicImage) -> Self {
+        match image {
+            DynamicImage::ImageLuma8(_) => { unreachable!() }
+            DynamicImage::ImageLumaA8(_) => { unreachable!() }
+            DynamicImage::ImageRgb8(image) => {
+                Self::from_rgb(image.as_ref(), image.width(), image.height())
+            }
+            DynamicImage::ImageRgba8(image) => {
+                Self::from_rgba(image.as_ref(), image.width(), image.height())
+            }
+            DynamicImage::ImageBgr8(_) => { unreachable!() }
+            DynamicImage::ImageBgra8(_) => { unreachable!() }
+        }
+    }
+
     pub fn from_rgb(image: &'a [u8], width: u32, height: u32) -> Self {
         Self { image, color: Channels::Rgb, width, height }
     }

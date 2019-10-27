@@ -1,9 +1,16 @@
+use std::fmt::{Debug, Error, Formatter};
 use std::ops::{Deref, DerefMut};
 
 use image::*;
 use libwebp_sys::WebPFree;
 
 pub struct WebPMemory<'a>(pub(crate) &'a mut [u8]);
+
+impl<'a> Debug for WebPMemory<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.debug_struct("WebpMemory").finish()
+    }
+}
 
 impl<'a> Drop for WebPMemory<'a> {
     fn drop(&mut self) {
@@ -65,17 +72,24 @@ impl<'a> WebPImage<'a> {
             DynamicImage::ImageRgb8(image)
         }
     }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+    pub fn height(&self) -> u32 {
+        self.height
+    }
 }
 
 impl<'a> Deref for WebPImage<'a> {
-    type Target = WebPMemory<'a>;
+    type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Channels {
     Rgb,
     Rgba,
