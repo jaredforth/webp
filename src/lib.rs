@@ -14,6 +14,7 @@ mod tests {
     use std::ops::Deref;
 
     use image::*;
+
     use crate::prelude::*;
 
     fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [u8; 3] {
@@ -64,25 +65,15 @@ mod tests {
 
     #[test]
     fn encode_decode() {
-        let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false).to_rgb();
-        let encoded = Encoder::new(
-            test_image_no_alpha.as_ref(),
-            Channels::Rgb,
-            SIZE,
-            SIZE,
-        ).encode_lossless();
+        let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
+        let encoded = Encoder::from_image(&test_image_no_alpha).encode_lossless();
 
         let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgb();
-        assert_eq!(test_image_no_alpha.deref(), decoded.deref());
+        assert_eq!(test_image_no_alpha.to_rgb().deref(), decoded.deref());
 
 
-        let test_image_alpha = generate_color_wheel(SIZE, SIZE, true).to_rgba();
-        let encoded = Encoder::new(
-            test_image_alpha.as_ref(),
-            Channels::Rgba,
-            SIZE,
-            SIZE,
-        ).encode_lossless();
+        let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
+        let encoded = Encoder::from_image(&test_image_alpha).encode_lossless();
 
         let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgba();
 
@@ -98,20 +89,15 @@ mod tests {
             }
         }
 
-        for (p1, p2) in test_image_alpha.pixels().zip(decoded.pixels()) {
+        for (p1, p2) in test_image_alpha.to_rgba().pixels().zip(decoded.pixels()) {
             assert!(compare(p1, p2))
         }
     }
 
     #[test]
     fn get_info() {
-        let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false).to_rgb();
-        let encoded = Encoder::new(
-            test_image_no_alpha.as_ref(),
-            Channels::Rgb,
-            SIZE,
-            SIZE,
-        ).encode_lossless();
+        let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
+        let encoded = Encoder::from_image(&test_image_no_alpha).encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
@@ -120,13 +106,8 @@ mod tests {
         assert!(!features.has_animation());
 
 
-        let test_image_alpha = generate_color_wheel(SIZE, SIZE, true).to_rgba();
-        let encoded = Encoder::new(
-            test_image_alpha.as_ref(),
-            Channels::Rgba,
-            SIZE,
-            SIZE,
-        ).encode_lossless();
+        let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
+        let encoded = Encoder::from_image(&test_image_alpha).encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
