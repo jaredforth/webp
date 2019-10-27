@@ -20,12 +20,6 @@ impl<'a> Drop for WebPMemory<'a> {
     }
 }
 
-impl<'a> Into<WebPMemory<'a>> for &'a mut [u8] {
-    fn into(self) -> WebPMemory<'a> {
-        WebPMemory(self)
-    }
-}
-
 impl<'a> Deref for WebPMemory<'a> {
     type Target = [u8];
 
@@ -48,8 +42,8 @@ pub struct WebPImage<'a> {
 }
 
 impl<'a> WebPImage<'a> {
-    pub fn new(data: &'a mut [u8], color: Channels, width: u32, height: u32) -> Self {
-        Self { data: data.into(), color, width, height }
+    pub(crate) fn new(data: &'a mut [u8], color: Channels, width: u32, height: u32) -> Self {
+        Self { data: WebPMemory(data), color, width, height }
     }
 
     #[cfg(feature = "image-conversion")]
