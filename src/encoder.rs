@@ -46,7 +46,7 @@ unsafe fn encode(image: &[u8], color: Channels, width: u32, height: u32, quality
         }
         Channels::Rgba if quality < 0.0 => {
             let stride = width * 4;
-            WebPEncodeLosslessBGRA(image.as_ptr(), width, height, stride, &mut out_buf as *mut _)
+            WebPEncodeLosslessRGBA(image.as_ptr(), width, height, stride, &mut out_buf as *mut _)
         }
         Channels::Rgba => {
             let stride = width * 4;
