@@ -4,46 +4,46 @@ use std::ops::{Deref, DerefMut};
 use image::*;
 use libwebp_sys::WebPFree;
 
-pub struct WebPMemory<'a>(pub(crate) &'a mut [u8]);
+pub struct WebPMemory(pub(crate) *mut u8, pub(crate) usize);
 
-impl<'a> Debug for WebPMemory<'a> {
+impl Debug for WebPMemory {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("WebpMemory").finish()
     }
 }
 
-impl<'a> Drop for WebPMemory<'a> {
+impl Drop for WebPMemory {
     fn drop(&mut self) {
         unsafe {
-            WebPFree(self.0.as_mut_ptr() as _)
+            WebPFree(self.0 as _)
         }
     }
 }
 
-impl<'a> Deref for WebPMemory<'a> {
+impl Deref for WebPMemory {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        unsafe { std::slice::from_raw_parts(self.0, self.1) }
     }
 }
 
-impl<'a> DerefMut for WebPMemory<'a> {
+impl DerefMut for WebPMemory {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        unsafe { std::slice::from_raw_parts_mut(self.0, self.1) }
     }
 }
 
-pub struct WebPImage<'a> {
-    data: WebPMemory<'a>,
+pub struct WebPImage {
+    data: WebPMemory,
     color: Channels,
     width: u32,
     height: u32,
 }
 
-impl<'a> WebPImage<'a> {
-    pub(crate) fn new(data: &'a mut [u8], color: Channels, width: u32, height: u32) -> Self {
-        Self { data: WebPMemory(data), color, width, height }
+impl WebPImage {
+    pub(crate) fn new(data: WebPMemory, color: Channels, width: u32, height: u32) -> Self {
+        Self { data, color, width, height }
     }
 
     #[cfg(feature = "image-conversion")]
@@ -75,11 +75,17 @@ impl<'a> WebPImage<'a> {
     }
 }
 
-impl<'a> Deref for WebPImage<'a> {
+impl Deref for WebPImage {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
-        &self.data
+        self.data.deref()
+    }
+}
+
+impl DerefMut for WebPImage {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.data.deref_mut()
     }
 }
 

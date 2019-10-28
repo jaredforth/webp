@@ -2,7 +2,7 @@ use std::fmt::{Debug, Error, Formatter};
 
 use libwebp_sys::*;
 
-use crate::shared::{Channels, WebPImage};
+use crate::shared::{Channels, WebPImage, WebPMemory};
 
 pub struct Decoder<'a> {
     data: &'a [u8],
@@ -50,23 +50,19 @@ impl<'a> Decoder<'a> {
         }
 
         let image = if features.has_alpha() {
-            let image = unsafe {
-                std::slice::from_raw_parts_mut(image_ptr, 4 * pixel_count as usize)
-            };
+            let len = 4 * pixel_count as usize;
 
             WebPImage::new(
-                image,
+                WebPMemory(image_ptr, len),
                 Channels::Rgba,
                 width,
                 height,
             )
         } else {
-            let image = unsafe {
-                std::slice::from_raw_parts_mut(image_ptr, 3 * pixel_count as usize)
-            };
+            let len = 3 * pixel_count as usize;
 
             WebPImage::new(
-                image,
+                WebPMemory(image_ptr, len),
                 Channels::Rgb,
                 width,
                 height,
