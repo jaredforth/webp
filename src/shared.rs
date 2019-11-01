@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Error, Formatter};
 use std::ops::{Deref, DerefMut};
 
+#[cfg(feature = "image-conversion")]
 use image::*;
 use libwebp_sys::WebPFree;
 
