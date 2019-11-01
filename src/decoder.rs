@@ -4,15 +4,19 @@ use libwebp_sys::*;
 
 use crate::shared::{Channels, WebPImage, WebPMemory};
 
+/// A decoder for WebP images. It uses the default configuration of libwebp.
+/// Currently, animated images are not supported.
 pub struct Decoder<'a> {
     data: &'a [u8],
 }
 
 impl<'a> Decoder<'a> {
+    /// Creates a new decoder from the given image data.
     pub fn new(data: &'a [u8]) -> Self {
         Self { data }
     }
 
+    /// Decodes the image data. If the image contains a valid WebP image, a [WebPImage](../shared/struct.WebPImage.html) is returned.
     pub fn decode(&self) -> Option<WebPImage> {
         let features = BitstreamFeatures::new(self.data)?;
 
@@ -73,6 +77,7 @@ impl<'a> Decoder<'a> {
     }
 }
 
+/// A wrapper around libwebp-sys::WebPBitstreamFeatures which allows to get information about the image.
 pub struct BitstreamFeatures(WebPBitstreamFeatures);
 
 impl BitstreamFeatures {
@@ -108,22 +113,27 @@ impl BitstreamFeatures {
         None
     }
 
+    /// Returns the width of the image as described by the bitstream in pixels.
     pub fn width(&self) -> u32 {
         self.0.width as u32
     }
 
+    /// Returns the height of the image as described by the bitstream in pixels.
     pub fn height(&self) -> u32 {
         self.0.height as u32
     }
 
+    /// Returns true if the image as described by the bitstream has an alpha channel.
     pub fn has_alpha(&self) -> bool {
         self.0.has_alpha == 1
     }
 
+    /// Returns true if the image as described by the bitstream is animated.
     pub fn has_animation(&self) -> bool {
         self.0.has_animation == 1
     }
 
+    /// Returns the format of the image as described by image bitstream.
     pub fn format(&self) -> Option<BitstreamFormat> {
         match self.0.format {
             0 => Some(BitstreamFormat::Undefined),
@@ -156,6 +166,7 @@ impl Debug for BitstreamFeatures {
 }
 
 #[derive(Debug)]
+/// The format of the image bitstream which is either lossy, lossless or something else.
 pub enum BitstreamFormat {
     Undefined = 0,
     Lossy = 1,

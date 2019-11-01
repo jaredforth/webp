@@ -1,3 +1,8 @@
+//! This crate provides provides functionality for encoding and decoding images from or into the webp format.
+//! It is implemented as a safe wrapper around the libwebp-sys crate.
+//! Currently only a subset of the features supported by libwebp are available.
+//! The simple encoding and decoding apis are implemented which use the default configuration of libwebp.
+
 pub mod decoder;
 pub mod encoder;
 pub mod shared;

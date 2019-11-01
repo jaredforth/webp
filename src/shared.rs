@@ -5,6 +5,8 @@ use std::ops::{Deref, DerefMut};
 use image::*;
 use libwebp_sys::WebPFree;
 
+/// This struct represents a safe wrapper around memory owned by libwebp.
+/// Its data contents can be accessed through the Deref and DerefMut traits.
 pub struct WebPMemory(pub(crate) *mut u8, pub(crate) usize);
 
 impl Debug for WebPMemory {
@@ -35,6 +37,9 @@ impl DerefMut for WebPMemory {
     }
 }
 
+/// This struct represents a decoded image.
+/// Its data contents can be accessed through the Deref and DerefMut traits.
+/// It is also possible to create an image::DynamicImage from this struct.
 pub struct WebPImage {
     data: WebPMemory,
     color: Channels,
@@ -47,6 +52,7 @@ impl WebPImage {
         Self { data, color, width, height }
     }
 
+    /// Creates a DynamicImage from this WebPImage.
     #[cfg(feature = "image-conversion")]
     pub fn as_image(&self) -> DynamicImage {
         if self.color.is_alpha() {
@@ -68,9 +74,12 @@ impl WebPImage {
         }
     }
 
+    /// Returns the width of the image in pixels.
     pub fn width(&self) -> u32 {
         self.width
     }
+
+    /// Returns the height of the image in pixels.
     pub fn height(&self) -> u32 {
         self.height
     }
@@ -90,6 +99,7 @@ impl DerefMut for WebPImage {
     }
 }
 
+/// Describes the pixel layout of an image.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Channels {
     Rgb,
@@ -97,6 +107,7 @@ pub enum Channels {
 }
 
 impl Channels {
+    /// Returns true if the pixel contains an alpha channel.
     pub fn is_alpha(&self) -> bool {
         self == &Channels::Rgba
     }
