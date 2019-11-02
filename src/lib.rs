@@ -3,16 +3,17 @@
 //! Currently only a subset of the features supported by libwebp are available.
 //! The simple encoding and decoding apis are implemented which use the default configuration of libwebp.
 
-pub mod decoder;
-pub mod encoder;
-pub mod shared;
+mod decoder;
+#[doc(inline)]
+pub use decoder::*;
 
-#[doc(hidden)]
-pub mod prelude {
-    pub use crate::decoder::*;
-    pub use crate::encoder::*;
-    pub use crate::shared::*;
-}
+mod encoder;
+#[doc(inline)]
+pub use encoder::*;
+
+mod shared;
+#[doc(inline)]
+pub use shared::*;
 
 #[cfg(test)]
 mod tests {
@@ -20,7 +21,7 @@ mod tests {
 
     use image::*;
 
-    use crate::prelude::*;
+    use crate::*;
 
     fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [u8; 3] {
         let h = (h - h.floor()) * 6.0;
