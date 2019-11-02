@@ -2,7 +2,7 @@ use std::fmt::{Debug, Error, Formatter};
 
 use libwebp_sys::*;
 
-use crate::shared::{Channels, WebPImage, WebPMemory};
+use crate::shared::{PixelLayout, WebPImage, WebPMemory};
 
 /// A decoder for WebP images. It uses the default configuration of libwebp.
 /// Currently, animated images are not supported.
@@ -58,7 +58,7 @@ impl<'a> Decoder<'a> {
 
             WebPImage::new(
                 WebPMemory(image_ptr, len),
-                Channels::Rgba,
+                PixelLayout::Rgba,
                 width,
                 height,
             )
@@ -67,7 +67,7 @@ impl<'a> Decoder<'a> {
 
             WebPImage::new(
                 WebPMemory(image_ptr, len),
-                Channels::Rgb,
+                PixelLayout::Rgb,
                 width,
                 height,
             )

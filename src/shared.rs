@@ -42,20 +42,20 @@ impl DerefMut for WebPMemory {
 /// It is also possible to create an image::DynamicImage from this struct.
 pub struct WebPImage {
     data: WebPMemory,
-    color: Channels,
+    layout: PixelLayout,
     width: u32,
     height: u32,
 }
 
 impl WebPImage {
-    pub(crate) fn new(data: WebPMemory, color: Channels, width: u32, height: u32) -> Self {
-        Self { data, color, width, height }
+    pub(crate) fn new(data: WebPMemory, layout: PixelLayout, width: u32, height: u32) -> Self {
+        Self { data, layout, width, height }
     }
 
     /// Creates a DynamicImage from this WebPImage.
     #[cfg(feature = "image-conversion")]
     pub fn as_image(&self) -> DynamicImage {
-        if self.color.is_alpha() {
+        if self.layout.is_alpha() {
             let image = ImageBuffer::from_raw(
                 self.width,
                 self.height,
@@ -99,16 +99,16 @@ impl DerefMut for WebPImage {
     }
 }
 
-/// Describes the pixel layout of an image.
+/// Describes the pixel layout (the order of the color channels) of an image.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Channels {
+pub enum PixelLayout {
     Rgb,
     Rgba,
 }
 
-impl Channels {
+impl PixelLayout {
     /// Returns true if the pixel contains an alpha channel.
-    pub fn is_alpha(&self) -> bool {
-        self == &Channels::Rgba
+    pub fn is_alpha(self) -> bool {
+        self == PixelLayout::Rgba
     }
 }
