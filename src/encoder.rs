@@ -1,4 +1,4 @@
-#[cfg(feature = "image-conversion")]
+#[cfg(feature = "img")]
 use image::DynamicImage;
 use libwebp_sys::*;
 
@@ -19,7 +19,7 @@ impl<'a> Encoder<'a> {
         Self { image, layout, width, height }
     }
 
-    #[cfg(feature = "image-conversion")]
+    #[cfg(feature = "img")]
     /// Creates a new encoder from the given image.
     pub fn from_image(image: &'a DynamicImage) -> Self {
         match image {

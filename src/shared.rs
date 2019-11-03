@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Error, Formatter};
 use std::ops::{Deref, DerefMut};
 
-#[cfg(feature = "image-conversion")]
+#[cfg(feature = "img")]
 use image::*;
 use libwebp_sys::WebPFree;
 
@@ -53,7 +53,7 @@ impl WebPImage {
     }
 
     /// Creates a DynamicImage from this WebPImage.
-    #[cfg(feature = "image-conversion")]
+    #[cfg(feature = "img")]
     pub fn as_image(&self) -> DynamicImage {
         if self.layout.is_alpha() {
             let image = ImageBuffer::from_raw(
