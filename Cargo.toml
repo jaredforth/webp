@@ -1,14 +1,18 @@
 [package]
 name = "webp"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Jared Forth <jaredforthdev@gmail.com>"]
 edition = "2018"
 
-description = "WebP conversion library | comming soon"
-license = "GPL-3.0-or-later"
+description = "WebP conversion library"
 
 homepage = "https://github.com/jaredforth/webp"
 repository = "https://github.com/jaredforth/webp.git"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+documentation = "https://docs.rs/webp"
+keywords = ["image", "webp", "conversion"]
+categories = ["external-ffi-bindings"]
 
 [dependencies]
 libwebp-sys = "0.2.0"
