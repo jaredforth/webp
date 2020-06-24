@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Jared Forth <jaredforthdev@gmail.com>"]
 edition = "2018"
 
-description = "WebP conversion library"
+description = "WebP conversion library. WIP"
 
 homepage = "https://github.com/jaredforth/webp"
 repository = "https://github.com/jaredforth/webp.git"
