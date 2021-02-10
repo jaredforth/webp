@@ -74,14 +74,14 @@ mod tests {
         let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
         let encoded = Encoder::from_image(&test_image_no_alpha).encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgb();
-        assert_eq!(test_image_no_alpha.to_rgb().deref(), decoded.deref());
+        let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgb8();
+        assert_eq!(test_image_no_alpha.to_rgb8().deref(), decoded.deref());
 
 
         let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
         let encoded = Encoder::from_image(&test_image_alpha).encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgba();
+        let decoded = Decoder::new(encoded.deref()).decode().unwrap().as_image().to_rgba8();
 
         // To achieve better compression, the webp library changes the rgb values in transparent regions
         // This means we have to exclusively compare the opaque regions
@@ -95,7 +95,7 @@ mod tests {
             }
         }
 
-        for (p1, p2) in test_image_alpha.to_rgba().pixels().zip(decoded.pixels()) {
+        for (p1, p2) in test_image_alpha.to_rgba8().pixels().zip(decoded.pixels()) {
             assert!(compare(p1, p2))
         }
     }

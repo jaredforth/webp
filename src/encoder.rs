@@ -33,6 +33,7 @@ impl<'a> Encoder<'a> {
             }
             DynamicImage::ImageBgr8(_) => { unreachable!() }
             DynamicImage::ImageBgra8(_) => { unreachable!() }
+            _ => { unreachable!() }
         }
     }
 
