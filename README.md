@@ -2,6 +2,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/w75cp0q4qr0hngf8?svg=true)](https://ci.appveyor.com/project/jaredforth/webp)
 [![Crate](https://img.shields.io/crates/v/webp.svg)](https://crates.io/crates/webp)
 [![API](https://docs.rs/webp/badge.svg)](https://docs.rs/webp)
+![Crates.io](https://img.shields.io/crates/d/webp)
 
 # webp
 
