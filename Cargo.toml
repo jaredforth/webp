@@ -1,10 +1,10 @@
 [package]
 name = "webp"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Jared Forth <jaredforthdev@gmail.com>"]
 edition = "2018"
 
-description = "WebP conversion library. WIP"
+description = "WebP conversion library."
 
 homepage = "https://github.com/jaredforth/webp"
 repository = "https://github.com/jaredforth/webp.git"
