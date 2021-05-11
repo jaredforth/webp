@@ -54,7 +54,7 @@ impl WebPImage {
 
     /// Creates a DynamicImage from this WebPImage.
     #[cfg(feature = "img")]
-    pub fn as_image(&self) -> DynamicImage {
+    pub fn to_image(&self) -> DynamicImage {
         if self.layout.is_alpha() {
             let image = ImageBuffer::from_raw(
                 self.width,
