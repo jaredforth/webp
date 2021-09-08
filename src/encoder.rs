@@ -21,19 +21,19 @@ impl<'a> Encoder<'a> {
 
     #[cfg(feature = "img")]
     /// Creates a new encoder from the given image.
-    pub fn from_image(image: &'a DynamicImage) -> Self {
+    pub fn from_image(image: &'a DynamicImage) -> Result<Self, &str> {
         match image {
-            DynamicImage::ImageLuma8(_) => { unreachable!() }
-            DynamicImage::ImageLumaA8(_) => { unreachable!() }
+            DynamicImage::ImageLuma8(_) => { Err("Unimplemented") }
+            DynamicImage::ImageLumaA8(_) => { Err("Unimplemented") }
             DynamicImage::ImageRgb8(image) => {
-                Self::from_rgb(image.as_ref(), image.width(), image.height())
+                Ok(Self::from_rgb(image.as_ref(), image.width(), image.height()))
             }
             DynamicImage::ImageRgba8(image) => {
-                Self::from_rgba(image.as_ref(), image.width(), image.height())
+                Ok(Self::from_rgba(image.as_ref(), image.width(), image.height()))
             }
-            DynamicImage::ImageBgr8(_) => { unreachable!() }
-            DynamicImage::ImageBgra8(_) => { unreachable!() }
-            _ => { unreachable!() }
+            DynamicImage::ImageBgr8(_) => { Err("Unimplemented") }
+            DynamicImage::ImageBgra8(_) => { Err("Unimplemented") }
+            _ => { Err("Unimplemented") }
         }
     }
 
