@@ -18,7 +18,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-webp = "0.1"
+webp = "0.2"
 ```
 
 ## License
