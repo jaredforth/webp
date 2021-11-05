@@ -47,13 +47,13 @@ impl<'a> Encoder<'a> {
         Self { image, layout: PixelLayout::Rgba, width, height }
     }
 
-    /// Emcode the image with the given quality.
+    /// Encode the image with the given quality.
     /// The image quality must be between 0.0 and 100.0 inclusive for minimal and maximal quality respectively.
     pub fn encode(&self, quality: f32) -> WebPMemory {
         unsafe { encode(self.image, self.layout, self.width, self.height, quality) }
     }
 
-    /// Emcode the image losslessly.
+    /// Encode the image losslessly.
     pub fn encode_lossless(&self) -> WebPMemory {
         unsafe { encode(self.image, self.layout, self.width, self.height, -1.0) }
     }
