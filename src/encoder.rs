@@ -23,17 +23,17 @@ impl<'a> Encoder<'a> {
     /// Creates a new encoder from the given image.
     pub fn from_image(image: &'a DynamicImage) -> Result<Self, &str> {
         match image {
-            DynamicImage::ImageLuma8(_) => { Err("Unimplemented") }
-            DynamicImage::ImageLumaA8(_) => { Err("Unimplemented") }
+            DynamicImage::ImageLuma8(_) => { Err("DynamicImage::ImageLuma8 is unimplemented. Use DynamicImage::ImageRgb8 or DynamicImage::ImageRgba8 instead.") }
+            DynamicImage::ImageLumaA8(_) => { Err("DynamicImage::ImageLumaA8 is unimplemented. Use DynamicImage::ImageRgb8 or DynamicImage::ImageRgba8 instead.") }
             DynamicImage::ImageRgb8(image) => {
                 Ok(Self::from_rgb(image.as_ref(), image.width(), image.height()))
             }
             DynamicImage::ImageRgba8(image) => {
                 Ok(Self::from_rgba(image.as_ref(), image.width(), image.height()))
             }
-            DynamicImage::ImageBgr8(_) => { Err("Unimplemented") }
-            DynamicImage::ImageBgra8(_) => { Err("Unimplemented") }
-            _ => { Err("Unimplemented") }
+            DynamicImage::ImageBgr8(_) => { Err("DynamicImage::ImageBgr8 is unimplemented. Use DynamicImage::ImageRgb8 or DynamicImage::ImageRgba8 instead.") }
+            DynamicImage::ImageBgra8(_) => { Err("DynamicImage::ImageBgra8 is unimplemented. Use DynamicImage::ImageRgb8 or DynamicImage::ImageRgba8 instead.") }
+            _ => { Err("Unimplemented. Use DynamicImage::ImageRgb8 or DynamicImage::ImageRgba8 instead.") }
         }
     }
 
