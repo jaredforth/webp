@@ -16,7 +16,7 @@ categories = ["external-ffi-bindings"]
 
 [dependencies]
 libwebp-sys = "0.4.2"
-image = { version = "^0.23.13", default-features = false, optional = true }
+image = { version = "^0.24.0", default-features = false, optional = true }
 
 [features]
 default = ["img"]

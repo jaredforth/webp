@@ -31,8 +31,6 @@ impl<'a> Encoder<'a> {
             DynamicImage::ImageRgba8(image) => {
                 Ok(Self::from_rgba(image.as_ref(), image.width(), image.height()))
             }
-            DynamicImage::ImageBgr8(_) => { Err("Unimplemented") }
-            DynamicImage::ImageBgra8(_) => { Err("Unimplemented") }
             _ => { Err("Unimplemented") }
         }
     }
