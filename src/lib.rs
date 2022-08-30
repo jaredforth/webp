@@ -10,6 +10,7 @@ pub use decoder::*;
 mod encoder;
 #[doc(inline)]
 pub use encoder::*;
+pub use libwebp_sys::WebPEncodingError;
 
 mod shared;
 #[doc(inline)]

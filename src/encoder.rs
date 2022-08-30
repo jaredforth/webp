@@ -48,39 +48,53 @@ impl<'a> Encoder<'a> {
     /// Encode the image with the given quality.
     /// The image quality must be between 0.0 and 100.0 inclusive for minimal and maximal quality respectively.
     pub fn encode(&self, quality: f32) -> WebPMemory {
-        unsafe { encode(self.image, self.layout, self.width, self.height, quality) }
+        self.encode_simple(false, quality).unwrap()
     }
 
     /// Encode the image losslessly.
     pub fn encode_lossless(&self) -> WebPMemory {
-        unsafe { encode(self.image, self.layout, self.width, self.height, -1.0) }
+        self.encode_simple(true, 75.0).unwrap()
     }
+
+	pub fn encode_simple(&self, lossless:bool, quality: f32)->Result<WebPMemory,WebPEncodingError>{
+		let mut config = WebPConfig::new().unwrap();
+		config.lossless = if lossless { 1 } else { 0 };
+		config.alpha_compression = if lossless { 0 } else { 1 };
+		config.quality = quality;
+		self.encode_advanced(&config)
+	}
+
+	pub fn encode_advanced(&self,config:&WebPConfig)->Result<WebPMemory,WebPEncodingError>{
+		unsafe{ encode(self.image,self.layout,self.width,self.height,config) }
+	}
 }
 
-unsafe fn encode(image: &[u8], color: PixelLayout, width: u32, height: u32, quality: f32) -> WebPMemory {
-    let width = width as _;
-    let height = height as _;
-
-    let mut buffer = std::ptr::null_mut::<u8>();
-
-    let len = match color {
-        PixelLayout::Rgb if quality < 0.0 => {
-            let stride = width * 3;
-            WebPEncodeLosslessRGB(image.as_ptr(), width, height, stride, &mut buffer as *mut _)
-        }
-        PixelLayout::Rgb => {
-            let stride = width * 3;
-            WebPEncodeRGB(image.as_ptr(), width, height, stride, quality, &mut buffer as *mut _)
-        }
-        PixelLayout::Rgba if quality < 0.0 => {
-            let stride = width * 4;
-            WebPEncodeLosslessRGBA(image.as_ptr(), width, height, stride, &mut buffer as *mut _)
-        }
-        PixelLayout::Rgba => {
-            let stride = width * 4;
-            WebPEncodeRGBA(image.as_ptr(), width, height, stride, quality, &mut buffer as *mut _)
-        }
-    };
-
-    WebPMemory(buffer, len)
+unsafe fn encode(image: &[u8], layout: PixelLayout, width: u32, height: u32,config:&WebPConfig) -> Result<WebPMemory,WebPEncodingError>{
+	if WebPValidateConfig(config) == 0 {
+		return Err(WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION);
+	}
+	let mut picture = WebPPicture::new().unwrap();
+	picture.use_argb = 1;
+	picture.width = width as i32;
+	picture.height = height as i32;
+	match layout{
+		PixelLayout::Rgba=>{
+			WebPPictureImportRGBA(&mut picture, image.as_ptr(),width as i32 * 4);
+		},
+		PixelLayout::Rgb=>{
+			WebPPictureImportRGB(&mut picture, image.as_ptr(),width as i32 * 3);
+		}
+	}
+	let mut ww=std::mem::MaybeUninit::uninit();
+	WebPMemoryWriterInit(ww.as_mut_ptr());
+	picture.writer = Some(WebPMemoryWrite);
+	picture.custom_ptr = ww.as_mut_ptr() as *mut std::ffi::c_void;
+	let status=libwebp_sys::WebPEncode(config,&mut picture);
+	let ww=ww.assume_init();
+	let mem=WebPMemory(ww.mem , ww.size as usize);
+	if status != VP8StatusCode::VP8_STATUS_OK as i32{
+		Ok(mem)
+	}else{
+		Err(picture.error_code)
+	}
 }
