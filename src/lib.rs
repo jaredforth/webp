@@ -16,6 +16,8 @@ mod shared;
 #[doc(inline)]
 pub use shared::*;
 
+pub use libwebp_sys::WebPConfig;
+
 #[cfg(test)]
 mod tests {
     use std::ops::Deref;
