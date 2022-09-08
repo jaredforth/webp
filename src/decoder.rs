@@ -85,20 +85,6 @@ impl BitstreamFeatures {
         unsafe {
             let mut features: WebPBitstreamFeatures = std::mem::zeroed();
 
-            // WebPGetFeatures is not available in libwebp-sys
-            #[allow(non_snake_case)]
-            unsafe fn WebPGetFeatures(
-                data: *const u8,
-                data_size: usize,
-                features: *mut WebPBitstreamFeatures) -> VP8StatusCode {
-                WebPGetFeaturesInternal(
-                    data,
-                    data_size,
-                    features,
-                    WEBP_DECODER_ABI_VERSION as i32,
-                )
-            }
-
             let result = WebPGetFeatures(
                 data.as_ptr(),
                 data.len(),

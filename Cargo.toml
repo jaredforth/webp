@@ -15,7 +15,7 @@ keywords = ["image", "webp", "conversion"]
 categories = ["external-ffi-bindings"]
 
 [dependencies]
-libwebp-sys = "0.4.2"
+libwebp-sys = "0.7.0"
 image = { version = "^0.24.0", default-features = false, optional = true }
 
 [features]

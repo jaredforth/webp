@@ -10,10 +10,13 @@ pub use decoder::*;
 mod encoder;
 #[doc(inline)]
 pub use encoder::*;
+pub use libwebp_sys::WebPEncodingError;
 
 mod shared;
 #[doc(inline)]
 pub use shared::*;
+
+pub use libwebp_sys::WebPConfig;
 
 #[cfg(test)]
 mod tests {
