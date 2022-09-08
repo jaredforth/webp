@@ -83,6 +83,10 @@ impl WebPImage {
     pub fn height(&self) -> u32 {
         self.height
     }
+
+    pub fn is_alpha(&self) -> bool {
+        self.layout.is_alpha()
+    }
 }
 
 impl Deref for WebPImage {
