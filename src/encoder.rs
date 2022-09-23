@@ -138,9 +138,7 @@ unsafe fn anim_encode(all_frame:&AnimEncoder)->WebPMemory{
 	let height=all_frame.height;
 	let mut uninit = std::mem::MaybeUninit::<WebPAnimEncoderOptions>::uninit();
 
-	const WEBP_MUX_ABI_VERSION:u32=264;//libwebp_sys::ffi::WEBP_MUX_ABI_VERSION
-
-	let mux_abi_version=WEBP_MUX_ABI_VERSION as std::os::raw::c_int;
+	let mux_abi_version=WebPGetMuxABIVersion();
 	WebPAnimEncoderOptionsInitInternal(uninit.as_mut_ptr(),mux_abi_version);
 	let encoder=WebPAnimEncoderNewInternal(width as i32,height as i32,uninit.as_ptr(),mux_abi_version);
 	let mut offset:std::os::raw::c_int=0;
