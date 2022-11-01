@@ -75,16 +75,27 @@ mod tests {
     #[test]
     fn encode_decode() {
         let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
-        let encoded = Encoder::from_image(&test_image_no_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_no_alpha)
+            .unwrap()
+            .encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().to_image().to_rgb8();
+        let decoded = Decoder::new(encoded.deref())
+            .decode()
+            .unwrap()
+            .to_image()
+            .to_rgb8();
         assert_eq!(test_image_no_alpha.to_rgb8().deref(), decoded.deref());
 
-
         let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
-        let encoded = Encoder::from_image(&test_image_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_alpha)
+            .unwrap()
+            .encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().to_image().to_rgba8();
+        let decoded = Decoder::new(encoded.deref())
+            .decode()
+            .unwrap()
+            .to_image()
+            .to_rgba8();
 
         // To achieve better compression, the webp library changes the rgb values in transparent regions
         // This means we have to exclusively compare the opaque regions
@@ -93,7 +104,8 @@ mod tests {
             // two pixels are equal if they are fully transparent
             if p1.channels()[3] == 0 && p2.channels()[3] == 0 {
                 true
-            } else { // or if they otherwise equal
+            } else {
+                // or if they otherwise equal
                 p1 == p2
             }
         }
@@ -106,7 +118,9 @@ mod tests {
     #[test]
     fn get_info() {
         let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
-        let encoded = Encoder::from_image(&test_image_no_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_no_alpha)
+            .unwrap()
+            .encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
@@ -114,9 +128,10 @@ mod tests {
         assert!(!features.has_alpha());
         assert!(!features.has_animation());
 
-
         let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
-        let encoded = Encoder::from_image(&test_image_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_alpha)
+            .unwrap()
+            .encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
