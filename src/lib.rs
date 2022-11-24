@@ -174,7 +174,7 @@ mod tests {
         let mut t = 1000;
         for v in encode_images.iter() {
             encoder.add_frame(AnimFrame::from_image(v, t).unwrap());
-            t -= 250;
+            t += 250;
         }
         let webp = encoder.encode();
         let mut decode_images: Vec<DynamicImage> = vec![];
