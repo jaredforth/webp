@@ -1,12 +1,11 @@
 use image::*;
-use webp::*;
 use std::path::Path;
+use webp::*;
 
 fn main() {
-
     // Using `image` crate, open the included .jpg file
     let img = image::open("assets/lake.jpg").unwrap();
-    let (w,h) = img.dimensions();
+    let (w, h) = img.dimensions();
     // Optionally, resize the existing photo and convert back into DynamicImage
     let size_factor = 1.0;
     let img: DynamicImage = image::DynamicImage::ImageRgba8(imageops::resize(
@@ -23,5 +22,4 @@ fn main() {
     // Define and write the WebP-encoded file to a given path
     let output_path = Path::new("assets").join("lake").with_extension("webp");
     std::fs::write(&output_path, &*webp).unwrap();
-
 }

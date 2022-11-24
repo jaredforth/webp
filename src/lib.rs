@@ -79,16 +79,27 @@ mod tests {
     #[test]
     fn encode_decode() {
         let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
-        let encoded = Encoder::from_image(&test_image_no_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_no_alpha)
+            .unwrap()
+            .encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().to_image().to_rgb8();
+        let decoded = Decoder::new(encoded.deref())
+            .decode()
+            .unwrap()
+            .to_image()
+            .to_rgb8();
         assert_eq!(test_image_no_alpha.to_rgb8().deref(), decoded.deref());
 
-
         let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
-        let encoded = Encoder::from_image(&test_image_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_alpha)
+            .unwrap()
+            .encode_lossless();
 
-        let decoded = Decoder::new(encoded.deref()).decode().unwrap().to_image().to_rgba8();
+        let decoded = Decoder::new(encoded.deref())
+            .decode()
+            .unwrap()
+            .to_image()
+            .to_rgba8();
 
         // To achieve better compression, the webp library changes the rgb values in transparent regions
         // This means we have to exclusively compare the opaque regions
@@ -97,7 +108,8 @@ mod tests {
             // two pixels are equal if they are fully transparent
             if p1.channels()[3] == 0 && p2.channels()[3] == 0 {
                 true
-            } else { // or if they otherwise equal
+            } else {
+                // or if they otherwise equal
                 p1 == p2
             }
         }
@@ -110,7 +122,9 @@ mod tests {
     #[test]
     fn get_info() {
         let test_image_no_alpha = generate_color_wheel(SIZE, SIZE, false);
-        let encoded = Encoder::from_image(&test_image_no_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_no_alpha)
+            .unwrap()
+            .encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
@@ -118,9 +132,10 @@ mod tests {
         assert!(!features.has_alpha());
         assert!(!features.has_animation());
 
-
         let test_image_alpha = generate_color_wheel(SIZE, SIZE, true);
-        let encoded = Encoder::from_image(&test_image_alpha).unwrap().encode_lossless();
+        let encoded = Encoder::from_image(&test_image_alpha)
+            .unwrap()
+            .encode_lossless();
 
         let features = BitstreamFeatures::new(encoded.deref()).unwrap();
         assert_eq!(features.width(), SIZE);
@@ -129,65 +144,66 @@ mod tests {
         assert!(!features.has_animation());
     }
 
-	#[test]
-	fn anim_encode_decode(){
-		let width=32u32;
-		let height=32u32;
-		let mut encode_images=vec![];
-		let mut config = WebPConfig::new().unwrap();
-		config.lossless = 1;
-		config.alpha_compression = 0;
-		config.alpha_filtering = 0;
-		config.quality = 75f32;
+    #[test]
+    fn anim_encode_decode() {
+        let width = 32u32;
+        let height = 32u32;
+        let mut encode_images = vec![];
+        let mut config = WebPConfig::new().unwrap();
+        config.lossless = 1;
+        config.alpha_compression = 0;
+        config.alpha_filtering = 0;
+        config.quality = 75f32;
 
-		let mut encoder=AnimEncoder::new(width,height,&config);
-		encoder.set_bgcolor([255,0,0,255]);
-		encoder.set_loop_count(3);
+        let mut encoder = AnimEncoder::new(width, height, &config);
+        encoder.set_bgcolor([255, 0, 0, 255]);
+        encoder.set_loop_count(3);
 
-		let v=generate_color_wheel(width,height,true);
-		encode_images.push(v);
+        let v = generate_color_wheel(width, height, true);
+        encode_images.push(v);
 
-		let v=generate_color_wheel(width,height,true);
-		encode_images.push(v);
+        let v = generate_color_wheel(width, height, true);
+        encode_images.push(v);
 
-		let v=generate_color_wheel(width,height,true);
-		encode_images.push(v);
+        let v = generate_color_wheel(width, height, true);
+        encode_images.push(v);
 
-		let v=generate_color_wheel(width,height,true);
-		encode_images.push(v);
+        let v = generate_color_wheel(width, height, true);
+        encode_images.push(v);
 
-		let mut t=1000;
-		for v in encode_images.iter(){
-			encoder.add_frame(AnimFrame::from_image(v,t).unwrap());
-			t-=250;
-		}
-		let webp=encoder.encode();
-		let mut decode_images:Vec<DynamicImage>=vec![];
-		match AnimDecoder::new(&webp).decode(){
-			Ok(frames)=>{
-				decode_images.extend((&frames).into_iter().map(|a|(&a).into()));
-			},
-			Err(mes)=>{
-				println!("{}",mes);
-			}
-		}
-		let mut encode_rgba=vec![];
-		for v in encode_images.into_iter(){
-			let value=DynamicImage::ImageRgba8(v.to_rgba8());
-			encode_rgba.push(value);
-		}
-		fn compare(p1: &Rgba<u8>, p2: &Rgba<u8>) -> bool {
-			// two pixels are equal if they are fully transparent
-			if p1.channels()[3] == 0 && p2.channels()[3] == 0 {
-				true
-			} else { // or if they otherwise equal
-				p1 == p2
-			}
-		}
-		for (i1,i2) in encode_rgba.iter().zip(decode_images.iter()){
-			for (p1, p2) in i1.to_rgba8().pixels().zip(i2.to_rgba8().pixels()) {
-				assert!(compare(p1, p2))
-			}
-		}
-	}
+        let mut t = 1000;
+        for v in encode_images.iter() {
+            encoder.add_frame(AnimFrame::from_image(v, t).unwrap());
+            t -= 250;
+        }
+        let webp = encoder.encode();
+        let mut decode_images: Vec<DynamicImage> = vec![];
+        match AnimDecoder::new(&webp).decode() {
+            Ok(frames) => {
+                decode_images.extend((&frames).into_iter().map(|a| (&a).into()));
+            }
+            Err(mes) => {
+                println!("{}", mes);
+            }
+        }
+        let mut encode_rgba = vec![];
+        for v in encode_images.into_iter() {
+            let value = DynamicImage::ImageRgba8(v.to_rgba8());
+            encode_rgba.push(value);
+        }
+        fn compare(p1: &Rgba<u8>, p2: &Rgba<u8>) -> bool {
+            // two pixels are equal if they are fully transparent
+            if p1.channels()[3] == 0 && p2.channels()[3] == 0 {
+                true
+            } else {
+                // or if they otherwise equal
+                p1 == p2
+            }
+        }
+        for (i1, i2) in encode_rgba.iter().zip(decode_images.iter()) {
+            for (p1, p2) in i1.to_rgba8().pixels().zip(i2.to_rgba8().pixels()) {
+                assert!(compare(p1, p2))
+            }
+        }
+    }
 }

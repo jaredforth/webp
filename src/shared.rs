@@ -17,9 +17,7 @@ impl Debug for WebPMemory {
 
 impl Drop for WebPMemory {
     fn drop(&mut self) {
-        unsafe {
-            WebPFree(self.0 as _)
-        }
+        unsafe { WebPFree(self.0 as _) }
     }
 }
 
@@ -49,26 +47,25 @@ pub struct WebPImage {
 
 impl WebPImage {
     pub(crate) fn new(data: WebPMemory, layout: PixelLayout, width: u32, height: u32) -> Self {
-        Self { data, layout, width, height }
+        Self {
+            data,
+            layout,
+            width,
+            height,
+        }
     }
 
     /// Creates a DynamicImage from this WebPImage.
     #[cfg(feature = "img")]
     pub fn to_image(&self) -> DynamicImage {
         if self.layout.is_alpha() {
-            let image = ImageBuffer::from_raw(
-                self.width,
-                self.height,
-                self.data.to_owned(),
-            ).expect("ImageBuffer couldn't be created");
+            let image = ImageBuffer::from_raw(self.width, self.height, self.data.to_owned())
+                .expect("ImageBuffer couldn't be created");
 
             DynamicImage::ImageRgba8(image)
         } else {
-            let image = ImageBuffer::from_raw(
-                self.width,
-                self.height,
-                self.data.to_owned(),
-            ).expect("ImageBuffer couldn't be created");
+            let image = ImageBuffer::from_raw(self.width, self.height, self.data.to_owned())
+                .expect("ImageBuffer couldn't be created");
 
             DynamicImage::ImageRgb8(image)
         }
