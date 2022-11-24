@@ -2,6 +2,9 @@
 use image::DynamicImage;
 use libwebp_sys::*;
 
+#[cfg(feature = "img")]
+use image::*;
+
 use crate::shared::*;
 
 /// An encoder for WebP images. It uses the default configuration of libwebp.
@@ -75,34 +78,76 @@ impl<'a> Encoder<'a> {
 pub struct AnimFrame<'a> {
     image: &'a [u8],
     layout: PixelLayout,
-	delay_ms: i32,
+	width:u32,
+	height:u32,
+	timestamp: i32,
 	config:Option<&'a WebPConfig>,
 }
 impl<'a> AnimFrame<'a> {
-	pub fn new(image: &'a [u8], layout: PixelLayout, delay_ms: i32,config: Option<&'a WebPConfig>) -> Self {
-		Self {image,layout, delay_ms ,config}
+	pub fn new(image: &'a [u8], layout: PixelLayout,width: u32,height: u32, timestamp: i32,config: Option<&'a WebPConfig>) -> Self {
+		Self {image,layout,width,height, timestamp ,config}
 	}
     #[cfg(feature = "img")]
-    pub fn from_image(image: &'a DynamicImage, delay_ms: i32) -> Result<Self, &str> {
+    pub fn from_image(image: &'a DynamicImage, timestamp: i32) -> Result<Self, &str> {
         match image {
             DynamicImage::ImageLuma8(_) => { Err("Unimplemented") }
             DynamicImage::ImageLumaA8(_) => { Err("Unimplemented") }
             DynamicImage::ImageRgb8(image) => {
-                Ok(Self::from_rgb(image.as_ref(), delay_ms))
+                Ok(Self::from_rgb(image.as_ref(),image.width(),image.height(), timestamp))
             }
             DynamicImage::ImageRgba8(image) => {
-                Ok(Self::from_rgba(image.as_ref(), delay_ms))
+                Ok(Self::from_rgba(image.as_ref(),image.width(),image.height(), timestamp))
             }
             _ => { Err("Unimplemented") }
         }
     }
 	/// Creates a new encoder from the given image data in the RGB pixel layout.
-	pub fn from_rgb(image: &'a [u8], delay_ms: i32) -> Self {
-		Self::new(image,PixelLayout::Rgb,delay_ms,None)
+	pub fn from_rgb(image: &'a [u8],width: u32,height: u32, timestamp: i32) -> Self {
+		Self::new(image,PixelLayout::Rgb,width,height,timestamp,None)
 	}
 	/// Creates a new encoder from the given image data in the RGBA pixel layout.
-	pub fn from_rgba(image: &'a [u8], delay_ms: i32) -> Self {
-		Self::new(image,PixelLayout::Rgba,delay_ms,None)
+	pub fn from_rgba(image: &'a [u8],width: u32,height: u32, timestamp: i32) -> Self {
+		Self::new(image,PixelLayout::Rgba,width,height,timestamp,None)
+	}
+	pub fn get_image(&self)->&[u8]{
+		&self.image
+	}
+	pub fn get_layout(&self)->PixelLayout{
+		self.layout
+	}
+	pub fn get_time_ms(&self)->i32{
+		self.timestamp
+	}
+	pub fn width(&self)->u32{
+		self.width
+	}
+	pub fn height(&self)->u32{
+		self.height
+	}
+}
+impl <'a> From<&'a AnimFrame<'a>> for Encoder<'a>{
+	fn from(f:&'a AnimFrame) -> Self {
+		Encoder::new(f.get_image(),f.layout,f.width,f.height)
+	}
+}
+#[cfg(feature = "img")]
+impl Into<DynamicImage> for &AnimFrame<'_>{
+	fn into(self) -> DynamicImage {
+		if self.layout.is_alpha() {
+			let image = ImageBuffer::from_raw(
+				self.width(),
+				self.height(),
+				self.get_image().to_owned(),
+			).expect("ImageBuffer couldn't be created");
+			DynamicImage::ImageRgba8(image)
+		} else {
+			let image = ImageBuffer::from_raw(
+				self.width(),
+				self.height(),
+				self.get_image().to_owned(),
+			).expect("ImageBuffer couldn't be created");
+			DynamicImage::ImageRgb8(image)
+		}
 	}
 }
 pub struct AnimEncoder<'a> {
@@ -141,14 +186,12 @@ unsafe fn anim_encode(all_frame:&AnimEncoder)->WebPMemory{
 	let mux_abi_version=WebPGetMuxABIVersion();
 	WebPAnimEncoderOptionsInitInternal(uninit.as_mut_ptr(),mux_abi_version);
 	let encoder=WebPAnimEncoderNewInternal(width as i32,height as i32,uninit.as_ptr(),mux_abi_version);
-	let mut offset:std::os::raw::c_int=0;
 	for frame in all_frame.frames.iter(){
 		let mut pic=new_picture(frame.image,frame.layout,width,height);
 		let config=frame.config.unwrap_or(all_frame.config);
-		WebPAnimEncoderAdd(encoder,&mut pic,offset,config);
-		offset+=frame.delay_ms;
+		WebPAnimEncoderAdd(encoder,&mut pic,frame.timestamp as std::os::raw::c_int,config);
 	}
-	WebPAnimEncoderAdd(encoder, std::ptr::null_mut(), offset, std::ptr::null());
+	WebPAnimEncoderAdd(encoder, std::ptr::null_mut(), 0, std::ptr::null());
 
 	let mut webp_data=std::mem::MaybeUninit::<WebPData>::uninit();
 	WebPAnimEncoderAssemble(encoder,webp_data.as_mut_ptr());

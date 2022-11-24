@@ -165,7 +165,7 @@ mod tests {
 		let mut decode_images:Vec<DynamicImage>=vec![];
 		match AnimDecoder::new(&webp).decode(){
 			Ok(frames)=>{
-				decode_images.extend(frames.as_ref().iter().map(|a|a.into()));
+				decode_images.extend((&frames).into_iter().map(|a|(&a).into()));
 			},
 			Err(mes)=>{
 				println!("{}",mes);

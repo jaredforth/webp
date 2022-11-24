@@ -1,10 +1,7 @@
 use libwebp_sys::*;
 
 use crate::shared::PixelLayout;
-use crate::{AnimFrame,Encoder};
-
-#[cfg(feature = "img")]
-use image::*;
+use crate::AnimFrame;
 
 pub struct AnimDecoder<'a> {
 	data: &'a [u8],
@@ -54,80 +51,26 @@ impl<'a> AnimDecoder<'a> {
 				img.set_len(len);
 				buf.copy_to(img.as_mut_ptr(),len);
 				let layout=if has_alpha{PixelLayout::Rgba}else{PixelLayout::Rgb};
-				let frame=DecodeAnimFrame::new(img,width,height,layout,timestamp);
-				list.push(frame.unwrap());
+				let frame=DecodeAnimFrame{img,width,height,layout,timestamp};
+				list.push(frame);
 			}
 		}
 		WebPAnimDecoderReset(dec);
 		//let demuxer:WebPDemuxer=WebPAnimDecoderGetDemuxer(dec);
 		// ... (Do something using 'demuxer'; e.g. get EXIF/XMP/ICC data).
 		WebPAnimDecoderDelete(dec);
-		list.sort_by(|a,b| a.time_ms.cmp(&b.time_ms));
 		let mut anim=DecodeAnimImage::from(list);
 		anim.loop_count=anim_info.loop_count;
 		anim.bg_color=anim_info.bgcolor;
 		Ok(anim)
 	}
 }
-pub struct DecodeAnimFrame{
-	image: Vec<u8>,
+struct DecodeAnimFrame{
+	img: Vec<u8>,
 	width:u32,
 	height:u32,
 	layout: PixelLayout,
-	time_ms: i32,
-}
-#[cfg(feature = "img")]
-impl Into<DynamicImage> for &DecodeAnimFrame{
-	fn into(self) -> DynamicImage {
-		if self.layout.is_alpha() {
-			let image = ImageBuffer::from_raw(
-				self.width(),
-				self.height(),
-				self.get_image().to_owned(),
-			).expect("ImageBuffer couldn't be created");
-			DynamicImage::ImageRgba8(image)
-		} else {
-			let image = ImageBuffer::from_raw(
-				self.width(),
-				self.height(),
-				self.get_image().to_owned(),
-			).expect("ImageBuffer couldn't be created");
-			DynamicImage::ImageRgb8(image)
-		}
-	}
-}
-impl DecodeAnimFrame{
-	pub fn new(image:Vec<u8>,width:u32,height:u32,layout:PixelLayout,time_ms:i32)->Option<DecodeAnimFrame>{
-		let len=(if layout.is_alpha(){4}else{3})*width*height;
-		if image.len()<len as usize{
-			None
-		}else{
-			Some(DecodeAnimFrame{image,width,height,layout,time_ms})
-		}
-	}
-	pub fn get_time_ms(&self)->i32{
-		self.time_ms
-	}
-	pub fn get_image(&self)->&[u8]{
-		&self.image
-	}
-	pub fn get_layout(&self)->PixelLayout{
-		self.layout
-	}
-	pub fn width(&self) -> u32 {
-		self.width
-	}
-	pub fn height(&self) -> u32 {
-		self.height
-	}
-	pub fn to_encode_frame(&self,offset_time:i32)->AnimFrame{
-		AnimFrame::new(&self.image,self.layout,self.time_ms-offset_time,None)
-	}
-}
-impl <'a> From<&'a DecodeAnimFrame> for Encoder<'a>{
-	fn from(f:&'a DecodeAnimFrame) -> Self {
-		Encoder::new(&f.image,f.layout,f.width,f.height)
-	}
+	timestamp:i32,
 }
 pub struct DecodeAnimImage{
 	frames:Vec<DecodeAnimFrame>,
@@ -144,8 +87,19 @@ impl From<Vec<DecodeAnimFrame>> for DecodeAnimImage{
 	}
 }
 impl DecodeAnimImage{
-	pub fn get_frame(&self,index:usize)->Option<&DecodeAnimFrame>{
-		self.frames.get(index)
+	#[inline]
+	pub fn get_frame(&self,index:usize)->Option<AnimFrame>{
+		let f=self.frames.get(index)?;
+		Some(AnimFrame::new(&f.img,f.layout,f.width,f.height,f.timestamp,None))
+	}
+	#[inline]
+	pub fn get_frames(&self,index:core::ops::Range<usize>)->Option<Vec<AnimFrame>>{
+		let dec_frames=self.frames.get(index)?;
+		let mut frames=Vec::with_capacity(dec_frames.len());
+		for f in dec_frames{
+			frames.push(AnimFrame::new(&f.img,f.layout,f.width,f.height,f.timestamp,None));
+		}
+		Some(frames)
 	}
 	pub fn len(&self)->usize{
 		self.frames.len()
@@ -153,9 +107,20 @@ impl DecodeAnimImage{
 	pub fn has_animation(&self)->bool{
 		self.len()>1
 	}
+	pub fn sort_by_time_stamp(&mut self){
+		self.frames.sort_by(|a,b| a.timestamp.cmp(&b.timestamp));
+	}
 }
-impl AsRef<Vec<DecodeAnimFrame>> for DecodeAnimImage{
-	fn as_ref(&self) -> &Vec<DecodeAnimFrame> {
-		&self.frames
+impl <'a> IntoIterator for &'a DecodeAnimImage{
+	type Item = AnimFrame<'a>;
+	type IntoIter = std::vec::IntoIter<Self::Item>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		let fs=self.get_frames(0..self.frames.len());
+		if let Some(v)=fs{
+			v.into_iter()
+		}else{
+			vec![].into_iter()
+		}
 	}
 }
