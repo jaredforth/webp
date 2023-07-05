@@ -26,7 +26,7 @@ webp = "0.2"
 An example for converting an image between JPEG and WebP formats is provided in the 
 `examples` directory. It can be run using 
 ```sh
-$ cargo run --release --example convert
+cargo run --release --example convert
 ```
 
 ## License
