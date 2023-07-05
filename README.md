@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/jaredforth/webp.svg?token=mH2pScYxqRkBEzpBQAu6&branch=master)](https://travis-ci.com/jaredforth/webp)
+![Build Status](https://github.com/jaredforth/webp/actions/workflows/rust.yml/badge.svg)
 [![Build status](https://ci.appveyor.com/api/projects/status/w75cp0q4qr0hngf8?svg=true)](https://ci.appveyor.com/project/jaredforth/webp)
 [![Crate](https://img.shields.io/crates/v/webp.svg)](https://crates.io/crates/webp)
 [![API](https://docs.rs/webp/badge.svg)](https://docs.rs/webp)
