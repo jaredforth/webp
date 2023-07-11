@@ -92,8 +92,10 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_advanced(&self, config: &WebPConfig) -> Result<WebPMemory, WebPEncodingError> {
         unsafe {
-            let picture = new_picture(self.image, self.layout, self.width, self.height);
-            encode(picture, config)
+            let mut picture = new_picture(self.image, self.layout, self.width, self.height);
+            let res = encode(picture, config);
+            libwebp_sys::WebPPictureFree(&mut picture as *mut _);
+            res
         }
     }
 }
