@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "img")]
 use image::*;
-use libwebp_sys::WebPFree;
+use libwebp_sys::{WebPFree, WebPPicture, WebPPictureFree};
 
 /// This struct represents a safe wrapper around memory owned by libwebp.
 /// Its data contents can be accessed through the Deref and DerefMut traits.
@@ -32,6 +32,29 @@ impl Deref for WebPMemory {
 impl DerefMut for WebPMemory {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { std::slice::from_raw_parts_mut(self.0, self.1) }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ManageedPicture(pub(crate) WebPPicture);
+
+impl Drop for ManageedPicture {
+    fn drop(&mut self) {
+        unsafe { WebPPictureFree(&mut self.0 as _) }
+    }
+}
+
+impl Deref for ManageedPicture {
+    type Target = WebPPicture;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ManageedPicture {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
