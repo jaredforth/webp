@@ -2,9 +2,6 @@
 use image::DynamicImage;
 use libwebp_sys::*;
 
-#[cfg(feature = "img")]
-use image::*;
-
 use crate::shared::*;
 
 /// An encoder for WebP images. It uses the default configuration of libwebp.
