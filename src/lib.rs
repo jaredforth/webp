@@ -3,6 +3,10 @@
 //! Currently only a subset of the features supported by libwebp are available.
 //! The simple encoding and decoding apis are implemented which use the default configuration of libwebp.
 
+mod animation_encoder;
+#[doc(inline)]
+pub use animation_encoder::*;
+
 mod decoder;
 #[doc(inline)]
 pub use decoder::*;
