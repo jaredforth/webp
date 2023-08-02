@@ -5,7 +5,7 @@
 
 # webp
 
-A WebP conversion library. WIP;
+A WebP conversion library
 
 Documentation:
 -   [API Reference](https://docs.rs/webp)
