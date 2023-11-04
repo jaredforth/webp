@@ -101,19 +101,34 @@ impl Into<DynamicImage> for &AnimFrame<'_> {
     }
 }
 pub struct AnimEncoder<'a> {
-    frames: Vec<AnimFrame<'a>>,
     width: u32,
     height: u32,
     config: &'a WebPConfig,
+    mux_abi_version: i32,
     muxparams: WebPMuxAnimParams,
+    encoder: *mut WebPAnimEncoder,
 }
 impl<'a> AnimEncoder<'a> {
     pub fn new(width: u32, height: u32, config: &'a WebPConfig) -> Self {
+        let mut uninit = std::mem::MaybeUninit::<WebPAnimEncoderOptions>::uninit();
+
+        let mux_abi_version = WebPGetMuxABIVersion();
+        let encoder = unsafe {
+            WebPAnimEncoderOptionsInitInternal(uninit.as_mut_ptr(), mux_abi_version);
+            WebPAnimEncoderNewInternal(
+                width as i32,
+                height as i32,
+                uninit.as_ptr(),
+                mux_abi_version,
+            )
+        };
+
         Self {
-            frames: vec![],
             width,
             height,
             config,
+            encoder,
+            mux_abi_version,
             muxparams: WebPMuxAnimParams {
                 bgcolor: 0,
                 loop_count: 0,
@@ -130,14 +145,59 @@ impl<'a> AnimEncoder<'a> {
     pub fn set_loop_count(&mut self, loop_count: i32) {
         self.muxparams.loop_count = loop_count;
     }
-    pub fn add_frame(&mut self, frame: AnimFrame<'a>) {
-        self.frames.push(frame);
+    pub fn add_frame(&mut self, frame: AnimFrame<'_>) -> Result<(), AnimEncodeError> {
+        unsafe {
+            let mut pic = crate::new_picture(frame.image, frame.layout, self.width, self.height);
+            let config = frame.config.unwrap_or(self.config);
+            let ok = WebPAnimEncoderAdd(
+                self.encoder,
+                &mut *pic as *mut _,
+                frame.timestamp as std::os::raw::c_int,
+                config,
+            );
+            if ok == 0 {
+                return Err(AnimEncodeError::WebPEncodingError(pic.error_code));
+            }
+        }
+
+        Ok(())
     }
     pub fn encode(&self) -> WebPMemory {
         self.try_encode().unwrap()
     }
     pub fn try_encode(&self) -> Result<WebPMemory, AnimEncodeError> {
-        unsafe { anim_encode(&self) }
+        let encoder = self.encoder;
+        unsafe {
+            WebPAnimEncoderAdd(encoder, std::ptr::null_mut(), 0, std::ptr::null());
+
+            let mut webp_data = std::mem::MaybeUninit::<WebPData>::uninit();
+            let ok = WebPAnimEncoderAssemble(encoder, webp_data.as_mut_ptr());
+            if ok == 0 {
+                //ok == false
+                let cstring = WebPAnimEncoderGetError(encoder);
+                let cstring = CString::from_raw(cstring as *mut _);
+                let string = cstring.to_string_lossy().to_string();
+                return Err(AnimEncodeError::WebPAnimEncoderGetError(string));
+            }
+            let mux = WebPMuxCreateInternal(webp_data.as_ptr(), 1, self.mux_abi_version);
+            let mux_error = WebPMuxSetAnimationParams(mux, &self.muxparams);
+            if mux_error != WebPMuxError::WEBP_MUX_OK {
+                return Err(AnimEncodeError::WebPMuxError(mux_error));
+            }
+            let mut raw_data: WebPData = webp_data.assume_init();
+            WebPDataClear(&mut raw_data);
+            let mut webp_data = std::mem::MaybeUninit::<WebPData>::uninit();
+            WebPMuxAssemble(mux, webp_data.as_mut_ptr());
+            WebPMuxDelete(mux);
+            let raw_data: WebPData = webp_data.assume_init();
+            Ok(WebPMemory(raw_data.bytes as *mut u8, raw_data.size))
+        }
+    }
+}
+
+impl Drop for AnimEncoder<'_> {
+    fn drop(&mut self) {
+        unsafe { WebPAnimEncoderDelete(self.encoder) };
     }
 }
 
@@ -146,60 +206,4 @@ pub enum AnimEncodeError {
     WebPEncodingError(WebPEncodingError),
     WebPMuxError(WebPMuxError),
     WebPAnimEncoderGetError(String),
-}
-unsafe fn anim_encode(all_frame: &AnimEncoder) -> Result<WebPMemory, AnimEncodeError> {
-    let width = all_frame.width;
-    let height = all_frame.height;
-    let mut uninit = std::mem::MaybeUninit::<WebPAnimEncoderOptions>::uninit();
-
-    let mux_abi_version = WebPGetMuxABIVersion();
-    WebPAnimEncoderOptionsInitInternal(uninit.as_mut_ptr(), mux_abi_version);
-    let encoder = WebPAnimEncoderNewInternal(
-        width as i32,
-        height as i32,
-        uninit.as_ptr(),
-        mux_abi_version,
-    );
-    let mut frame_pictures = vec![];
-    for frame in all_frame.frames.iter() {
-        let mut pic = crate::new_picture(frame.image, frame.layout, width, height);
-        let config = frame.config.unwrap_or(all_frame.config);
-        let ok = WebPAnimEncoderAdd(
-            encoder,
-            &mut *pic as *mut _,
-            frame.timestamp as std::os::raw::c_int,
-            config,
-        );
-        if ok == 0 {
-            //ok == false
-            WebPAnimEncoderDelete(encoder);
-            return Err(AnimEncodeError::WebPEncodingError(pic.error_code));
-        }
-        frame_pictures.push(pic);
-    }
-    WebPAnimEncoderAdd(encoder, std::ptr::null_mut(), 0, std::ptr::null());
-
-    let mut webp_data = std::mem::MaybeUninit::<WebPData>::uninit();
-    let ok = WebPAnimEncoderAssemble(encoder, webp_data.as_mut_ptr());
-    if ok == 0 {
-        //ok == false
-        let cstring = WebPAnimEncoderGetError(encoder);
-        let cstring = CString::from_raw(cstring as *mut _);
-        let string = cstring.to_string_lossy().to_string();
-        WebPAnimEncoderDelete(encoder);
-        return Err(AnimEncodeError::WebPAnimEncoderGetError(string));
-    }
-    WebPAnimEncoderDelete(encoder);
-    let mux = WebPMuxCreateInternal(webp_data.as_ptr(), 1, mux_abi_version);
-    let mux_error = WebPMuxSetAnimationParams(mux, &all_frame.muxparams);
-    if mux_error != WebPMuxError::WEBP_MUX_OK {
-        return Err(AnimEncodeError::WebPMuxError(mux_error));
-    }
-    let mut raw_data: WebPData = webp_data.assume_init();
-    WebPDataClear(&mut raw_data);
-    let mut webp_data = std::mem::MaybeUninit::<WebPData>::uninit();
-    WebPMuxAssemble(mux, webp_data.as_mut_ptr());
-    WebPMuxDelete(mux);
-    let raw_data: WebPData = webp_data.assume_init();
-    Ok(WebPMemory(raw_data.bytes as *mut u8, raw_data.size))
 }
