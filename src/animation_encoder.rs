@@ -1,11 +1,8 @@
 use std::ffi::CString;
 
 #[cfg(feature = "img")]
-use image::DynamicImage;
+use image::{DynamicImage, ImageBuffer};
 use libwebp_sys::*;
-
-#[cfg(feature = "img")]
-use image::*;
 
 use crate::{shared::*, Encoder};
 
