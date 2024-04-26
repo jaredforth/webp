@@ -90,8 +90,7 @@ impl<'a> Encoder<'a> {
     pub fn encode_advanced(&self, config: &WebPConfig) -> Result<WebPMemory, WebPEncodingError> {
         unsafe {
             let mut picture = new_picture(self.image, self.layout, self.width, self.height);
-            let res = encode(&mut *picture, config);
-            res
+            encode(&mut picture, config)
         }
     }
 }
@@ -129,7 +128,7 @@ unsafe fn encode(
     picture.custom_ptr = ww.as_mut_ptr() as *mut std::ffi::c_void;
     let status = libwebp_sys::WebPEncode(config, picture);
     let ww = ww.assume_init();
-    let mem = WebPMemory(ww.mem, ww.size as usize);
+    let mem = WebPMemory(ww.mem, ww.size);
     if status != VP8StatusCode::VP8_STATUS_OK as i32 {
         Ok(mem)
     } else {
