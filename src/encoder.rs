@@ -121,9 +121,14 @@ mod internal {
             height: u32,
         ) -> Self { // TODO: return an error instead of panicking in the next semver-breaking release
 
-            // if width == 0 || height == 0 {
-            //     panic!("Width and height must be non-zero.");
-            // }
+            if width == 0 || height == 0 {
+                // TODO: enable this check once this function returns a Result.
+                // As of v0.3.0 it's possible to contruct an Encoder with width or height 0,
+                // but encoding will fail and the error is really uninformative:
+                // "called `Result::unwrap()` on an `Err` value: VP8_ENC_ERROR_BAD_DIMENSION"
+
+                //panic!("Width and height must be non-zero.");
+            }
 
             // We're going to compare the incoming width * height * bpp against the length of a slice.
             // The length of a slice is a `usize`, so we are going to do arithmetic in `usize` as well.
@@ -147,7 +152,7 @@ mod internal {
             }
 
             if image.len() > expected_len {
-                // TODO: reject this in the future, once this function is made to return an error
+                // TODO: reject this in the future, once this function is made to return Result
             }
 
             CheckedEncoder {
