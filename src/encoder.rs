@@ -14,12 +14,9 @@ impl<'a> Encoder<'a> {
     /// Creates a new encoder from the given image data.
     /// The image data must be in the pixel layout of the color parameter.
     pub fn new(image: &'a [u8], layout: PixelLayout, width: u32, height: u32) -> Self {
-        Self { e: CheckedEncoder::new(
-            image,
-            layout,
-            width,
-            height,
-        )}
+        Self {
+            e: CheckedEncoder::new(image, layout, width, height),
+        }
     }
 
     #[cfg(feature = "img")]
@@ -44,22 +41,16 @@ impl<'a> Encoder<'a> {
 
     /// Creates a new encoder from the given image data in the RGB pixel layout.
     pub fn from_rgb(image: &'a [u8], width: u32, height: u32) -> Self {
-        Self { e: CheckedEncoder::new(
-            image,
-            PixelLayout::Rgb,
-            width,
-            height,
-        )}
+        Self {
+            e: CheckedEncoder::new(image, PixelLayout::Rgb, width, height),
+        }
     }
 
     /// Creates a new encoder from the given image data in the RGBA pixel layout.
     pub fn from_rgba(image: &'a [u8], width: u32, height: u32) -> Self {
-        Self { e: CheckedEncoder::new(
-            image,
-            PixelLayout::Rgba,
-            width,
-            height,
-        )}
+        Self {
+            e: CheckedEncoder::new(image, PixelLayout::Rgba, width, height),
+        }
     }
 
     /// Encode the image with the given quality.
@@ -87,7 +78,12 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_advanced(&self, config: &WebPConfig) -> Result<WebPMemory, WebPEncodingError> {
         unsafe {
-            let mut picture = new_picture(self.e.image(), self.e.layout(), self.e.width(), self.e.height());
+            let mut picture = new_picture(
+                self.e.image(),
+                self.e.layout(),
+                self.e.width(),
+                self.e.height(),
+            );
             let res = encode(&mut *picture, config);
             res
         }
@@ -112,14 +108,10 @@ mod internal {
 
     impl<'a> CheckedEncoder<'a> {
         /// Creates a new instance of `CheckedEncoder`, and performs the necessary bounds checks.
-        /// 
+        ///
         /// This is the only way to create a `CheckedEncoder` exposed outside the `internal` module.
-        pub(super) fn new(
-            image: &'a [u8],
-            layout: PixelLayout,
-            width: u32,
-            height: u32,
-        ) -> Self { // TODO: return an error instead of panicking in the next semver-breaking release
+        pub(super) fn new(image: &'a [u8], layout: PixelLayout, width: u32, height: u32) -> Self {
+            // TODO: return an error instead of panicking in the next semver-breaking release
 
             if width == 0 || height == 0 {
                 // TODO: enable this check once this function returns a Result.
@@ -143,7 +135,9 @@ mod internal {
             //
             // Using `saturating_mul` is enough because it's not possible to construct a valid slice of size `usize::MAX` anyway,
             // and it makes for simpler code and a nicer error message.
-            let expected_len = width_u.saturating_mul(height_u).saturating_mul(bytes_per_pixel_u);
+            let expected_len = width_u
+                .saturating_mul(height_u)
+                .saturating_mul(bytes_per_pixel_u);
             if image.len() < expected_len {
                 panic!(
                     "Image buffer too small. Expected at least {} bytes for a {}x{} image with {:?} layout, got {}.",
@@ -178,7 +172,6 @@ mod internal {
         pub(super) fn image(&self) -> &'a [u8] {
             self.image
         }
-
     }
 }
 
