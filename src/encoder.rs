@@ -147,9 +147,7 @@ mod internal {
             }
 
             if image.len() > expected_len {
-                 // Warn or error if there's extra data that isn't a full pixel,
-                 // depending on strictness. For now, let's allow larger buffers
-                 // as long as they contain enough data.
+                // TODO: reject this in the future, once this function is made to return an error
             }
 
             CheckedEncoder {
