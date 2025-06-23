@@ -96,6 +96,85 @@ impl<'a> Encoder<'a> {
     }
 }
 
+/// This module contains the private CheckedEncoder so that it cannot be constructed directly from the outside.
+/// That ensures that the only way to construct one validates the supplied parameters.
+mod internal {
+    use std::convert::TryInto;
+
+    use crate::shared::PixelLayout;
+
+    /// Encoder paramters that were validated on creation
+    pub(super) struct CheckedEncoder<'a> {
+        image: &'a [u8],
+        layout: PixelLayout,
+        width: u32,
+        height: u32,
+    }
+
+    impl<'a> CheckedEncoder<'a> {
+        /// Creates a new instance of `CheckedEncoder`, and performs the necessary bounds checks.
+        /// 
+        /// This is the only way to create a `CheckedEncoder` exposed outside the `internal` module.
+        pub(super) fn new(
+            image: &'a [u8],
+            layout: PixelLayout,
+            width: u32,
+            height: u32,
+        ) -> Self { // TODO: return an error instead of panicking in the next semver-breaking release
+
+            // if width == 0 || height == 0 {
+            //     panic!("Width and height must be non-zero.");
+            // }
+
+            // We're going to compare the incoming width * height * bpp against the length of a slice.
+            // The length of a slice is a `usize`, so we are going to do arithmetic in `usize` as well.
+            //
+            // On 32-bit and 64-bit platforms these conversions always suceeed and get optimized out.
+            let width_u: usize = width.try_into().unwrap();
+            let height_u: usize = height.try_into().unwrap();
+            let bytes_per_pixel_u: usize = layout.bytes_per_pixel().into();
+
+            let expected_len = width_u.saturating_mul(height_u).saturating_mul(bytes_per_pixel_u);
+            if image.len() < expected_len {
+                panic!(
+                    "Image buffer too small. Expected at least {} bytes for a {}x{} image with {:?} layout, got {}.",
+                    expected_len, width, height, layout, image.len()
+                );
+            }
+
+            if image.len() > expected_len {
+                 // Warn or error if there's extra data that isn't a full pixel,
+                 // depending on strictness. For now, let's allow larger buffers
+                 // as long as they contain enough data.
+            }
+
+            CheckedEncoder {
+                image,
+                layout,
+                width,
+                height,
+            }
+        }
+
+        pub(super) fn width(&self) -> u32 {
+            self.width
+        }
+
+        pub(super) fn height(&self) -> u32 {
+            self.height
+        }
+
+        pub(super) fn layout(&self) -> PixelLayout {
+            self.layout
+        }
+
+        pub(super) fn image(&self) -> &'a [u8] {
+            self.image
+        }
+
+    }
+}
+
 pub(crate) unsafe fn new_picture(
     image: &[u8],
     layout: PixelLayout,
