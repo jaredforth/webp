@@ -215,3 +215,14 @@ unsafe fn encode(
         Err(picture.error_code)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn construct_encoder_with_buffer_overflow() {
+        Encoder::from_rgb(&[], 16383, 16383);
+    }
+}
