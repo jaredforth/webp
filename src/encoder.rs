@@ -3,25 +3,23 @@ use image::DynamicImage;
 use libwebp_sys::*;
 
 use crate::shared::*;
+use internal::CheckedEncoder;
 
 /// An encoder for WebP images. It uses the default configuration of libwebp.
 pub struct Encoder<'a> {
-    image: &'a [u8],
-    layout: PixelLayout,
-    width: u32,
-    height: u32,
+    e: CheckedEncoder<'a>,
 }
 
 impl<'a> Encoder<'a> {
     /// Creates a new encoder from the given image data.
     /// The image data must be in the pixel layout of the color parameter.
     pub fn new(image: &'a [u8], layout: PixelLayout, width: u32, height: u32) -> Self {
-        Self {
+        Self { e: CheckedEncoder::new(
             image,
             layout,
             width,
             height,
-        }
+        )}
     }
 
     #[cfg(feature = "img")]
@@ -46,22 +44,22 @@ impl<'a> Encoder<'a> {
 
     /// Creates a new encoder from the given image data in the RGB pixel layout.
     pub fn from_rgb(image: &'a [u8], width: u32, height: u32) -> Self {
-        Self {
+        Self { e: CheckedEncoder::new(
             image,
-            layout: PixelLayout::Rgb,
+            PixelLayout::Rgb,
             width,
             height,
-        }
+        )}
     }
 
     /// Creates a new encoder from the given image data in the RGBA pixel layout.
     pub fn from_rgba(image: &'a [u8], width: u32, height: u32) -> Self {
-        Self {
+        Self { e: CheckedEncoder::new(
             image,
-            layout: PixelLayout::Rgba,
+            PixelLayout::Rgba,
             width,
             height,
-        }
+        )}
     }
 
     /// Encode the image with the given quality.
@@ -89,7 +87,7 @@ impl<'a> Encoder<'a> {
 
     pub fn encode_advanced(&self, config: &WebPConfig) -> Result<WebPMemory, WebPEncodingError> {
         unsafe {
-            let mut picture = new_picture(self.image, self.layout, self.width, self.height);
+            let mut picture = new_picture(self.e.image(), self.e.layout(), self.e.width(), self.e.height());
             let res = encode(&mut *picture, config);
             res
         }
@@ -103,7 +101,8 @@ mod internal {
 
     use crate::shared::PixelLayout;
 
-    /// Encoder paramters that were validated on creation
+    /// Validated encoder parameters, guaranteeing `image.len() >= width * height * bytes_per_pixel`.
+    /// Required for memory safety. Their absence would allow out-of-bounds reads.
     pub(super) struct CheckedEncoder<'a> {
         image: &'a [u8],
         layout: PixelLayout,
