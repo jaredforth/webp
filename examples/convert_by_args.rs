@@ -2,10 +2,8 @@ use image::*;
 use std::{env::args, fmt::format, path::Path};
 use webp::*;
 
-
 /// cargo run --example convert_by_args lake.jpg.
 fn main() {
-
     //Add a get args functions
     let arg: Vec<String> = args().collect();
     if arg.len() != 2 {
@@ -16,7 +14,6 @@ fn main() {
     //Add a format functions for a new Path by String
     let path = format(format_args!("assets/{}", arg[1]));
     let path = Path::new(&path);
-
 
     // Using `image` crate, open the included .jpg file
     let img = image::open(path).unwrap();
