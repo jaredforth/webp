@@ -133,6 +133,11 @@ mod internal {
             let height_u: usize = height.try_into().unwrap();
             let bytes_per_pixel_u: usize = layout.bytes_per_pixel().into();
 
+            // If we simply calculate `width * height * bytes_per_pixel`, arithmetic may overflow in release mode
+            // and make it possible to bypass the length check. So we need either .checked_mul or .saturating_mul here.
+            //
+            // Using `saturating_mul` is enough because it's not possible to construct a valid slice of size `usize::MAX` anyway,
+            // and it makes for simpler code and a nicer error message.
             let expected_len = width_u.saturating_mul(height_u).saturating_mul(bytes_per_pixel_u);
             if image.len() < expected_len {
                 panic!(
