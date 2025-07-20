@@ -144,3 +144,109 @@ pub enum BitstreamFormat {
     Lossy = 1,
     Lossless = 2,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn minimal_webp_rgb() -> Vec<u8> {
+        vec![
+            0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50,
+            0x38, 0x20, 0x18, 0x00, 0x00, 0x00, 0x30, 0x01, 0x00, 0x9d, 0x01, 0x2a, 0x01, 0x00,
+            0x01, 0x00, 0x02, 0x00, 0x34, 0x25, 0xa4, 0x00, 0x03, 0x70, 0x00, 0xfe, 0xfb, 0x94,
+            0x00, 0x00,
+        ]
+    }
+
+    #[test]
+    fn test_bitstream_features_basic() {
+        let data = minimal_webp_rgb();
+        let features = BitstreamFeatures::new(&data).expect("Should parse features");
+        assert_eq!(features.width(), 1);
+        assert_eq!(features.height(), 1);
+        assert!(!features.has_alpha());
+        assert!(!features.has_animation());
+        assert!(matches!(
+            features.format(),
+            Some(BitstreamFormat::Lossy)
+                | Some(BitstreamFormat::Lossless)
+                | Some(BitstreamFormat::Undefined)
+        ));
+    }
+
+    #[test]
+    fn test_decoder_decode_success() {
+        let mut data = minimal_webp_rgb();
+        data.extend_from_slice(&[0u8; 32]); // Add padding
+        let decoder = Decoder::new(&data);
+        let image = decoder.decode();
+        assert!(image.is_some(), "Should decode minimal WebP");
+        let image = image.unwrap();
+        assert_eq!(image.width(), 1);
+        assert_eq!(image.height(), 1);
+        assert_eq!(image.layout(), PixelLayout::Rgb);
+    }
+
+    #[test]
+    fn test_decoder_rejects_animation() {
+        let data = minimal_webp_rgb();
+        let decoder = Decoder::new(&data);
+        let image = decoder.decode();
+        assert!(image.is_some());
+    }
+
+    #[test]
+    fn test_bitstream_features_invalid_data() {
+        let data = vec![0u8; 8];
+        let features = BitstreamFeatures::new(&data);
+        assert!(features.is_none(), "Should not parse invalid WebP");
+    }
+
+    #[test]
+    fn test_decoder_invalid_data() {
+        let data = vec![0u8; 8];
+        let decoder = Decoder::new(&data);
+        assert!(decoder.decode().is_none(), "Should not decode invalid WebP");
+    }
+
+    #[test]
+    fn test_bitstreamfeatures_debug_output() {
+        fn make_features(
+            width: i32,
+            height: i32,
+            has_alpha: i32,
+            has_animation: i32,
+            format: i32,
+        ) -> BitstreamFeatures {
+            BitstreamFeatures(WebPBitstreamFeatures {
+                width,
+                height,
+                has_alpha,
+                has_animation,
+                format,
+                pad: [0; 5],
+            })
+        }
+
+        let cases = [
+            (make_features(1, 2, 1, 0, 1), "format: \"Lossy\""),
+            (make_features(3, 4, 0, 1, 2), "format: \"Lossless\""),
+            (make_features(5, 6, 0, 0, 0), "format: \"Undefined\""),
+            (make_features(7, 8, 1, 1, 42), "format: \"Error\""),
+        ];
+
+        for (features, format_str) in &cases {
+            let dbg = format!("{features:?}");
+            assert!(dbg.contains("BitstreamFeatures"));
+            assert!(dbg.contains(&format!("width: {}", features.width())));
+            assert!(dbg.contains(&format!("height: {}", features.height())));
+            assert!(dbg.contains(&format!("has_alpha: {}", features.has_alpha())));
+            assert!(dbg.contains(&format!("has_animation: {}", features.has_animation())));
+            assert!(
+                dbg.contains(format_str),
+                "Debug output missing expected format string: {}",
+                format_str
+            );
+        }
+    }
+}
