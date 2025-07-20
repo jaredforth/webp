@@ -1,9 +1,6 @@
 #[cfg(feature = "img")]
-use image::DynamicImage;
+use image::{DynamicImage, ImageBuffer};
 use libwebp_sys::*;
-
-#[cfg(feature = "img")]
-use image::*;
 
 use crate::{shared::*, Encoder};
 
@@ -62,7 +59,7 @@ impl<'a> AnimFrame<'a> {
         Self::new(image, PixelLayout::Rgba, width, height, timestamp, None)
     }
     pub fn get_image(&self) -> &[u8] {
-        &self.image
+        self.image
     }
     pub fn get_layout(&self) -> PixelLayout {
         self.layout
@@ -83,16 +80,16 @@ impl<'a> From<&'a AnimFrame<'a>> for Encoder<'a> {
     }
 }
 #[cfg(feature = "img")]
-impl Into<DynamicImage> for &AnimFrame<'_> {
-    fn into(self) -> DynamicImage {
-        if self.layout.is_alpha() {
+impl From<&AnimFrame<'_>> for DynamicImage {
+    fn from(value: &AnimFrame<'_>) -> DynamicImage {
+        if value.layout.is_alpha() {
             let image =
-                ImageBuffer::from_raw(self.width(), self.height(), self.get_image().to_owned())
+                ImageBuffer::from_raw(value.width(), value.height(), value.get_image().to_owned())
                     .expect("ImageBuffer couldn't be created");
             DynamicImage::ImageRgba8(image)
         } else {
             let image =
-                ImageBuffer::from_raw(self.width(), self.height(), self.get_image().to_owned())
+                ImageBuffer::from_raw(value.width(), value.height(), value.get_image().to_owned())
                     .expect("ImageBuffer couldn't be created");
             DynamicImage::ImageRgb8(image)
         }
@@ -135,7 +132,7 @@ impl<'a> AnimEncoder<'a> {
         self.try_encode().unwrap()
     }
     pub fn try_encode(&self) -> Result<WebPMemory, AnimEncodeError> {
-        unsafe { anim_encode(&self) }
+        unsafe { anim_encode(self) }
     }
 }
 
