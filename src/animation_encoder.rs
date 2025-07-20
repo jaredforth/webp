@@ -1,5 +1,3 @@
-use std::ffi::CString;
-
 #[cfg(feature = "img")]
 use image::{DynamicImage, ImageBuffer};
 use libwebp_sys::*;
@@ -33,7 +31,7 @@ impl<'a> AnimFrame<'a> {
         }
     }
     #[cfg(feature = "img")]
-    pub fn from_image(image: &'a DynamicImage, timestamp: i32) -> Result<Self, &str> {
+    pub fn from_image(image: &'a DynamicImage, timestamp: i32) -> Result<Self, &'a str> {
         match image {
             DynamicImage::ImageLuma8(_) => Err("Unimplemented"),
             DynamicImage::ImageLumaA8(_) => Err("Unimplemented"),
@@ -179,10 +177,14 @@ unsafe fn anim_encode(all_frame: &AnimEncoder) -> Result<WebPMemory, AnimEncodeE
     let mut webp_data = std::mem::MaybeUninit::<WebPData>::uninit();
     let ok = WebPAnimEncoderAssemble(encoder, webp_data.as_mut_ptr());
     if ok == 0 {
-        //ok == false
-        let cstring = WebPAnimEncoderGetError(encoder);
-        let cstring = CString::from_raw(cstring as *mut _);
-        let string = cstring.to_string_lossy().to_string();
+        let err_ptr = WebPAnimEncoderGetError(encoder);
+        let string = if !err_ptr.is_null() {
+            unsafe { std::ffi::CStr::from_ptr(err_ptr) }
+                .to_string_lossy()
+                .into_owned()
+        } else {
+            String::from("Unknown error")
+        };
         WebPAnimEncoderDelete(encoder);
         return Err(AnimEncodeError::WebPAnimEncoderGetError(string));
     }
@@ -199,4 +201,86 @@ unsafe fn anim_encode(all_frame: &AnimEncoder) -> Result<WebPMemory, AnimEncodeE
     WebPMuxDelete(mux);
     let raw_data: WebPData = webp_data.assume_init();
     Ok(WebPMemory(raw_data.bytes as *mut u8, raw_data.size))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shared::PixelLayout;
+    use crate::AnimDecoder;
+
+    fn default_config() -> WebPConfig {
+        let mut config = unsafe { std::mem::zeroed() };
+        let ok = unsafe {
+            WebPConfigInitInternal(
+                &mut config,
+                WebPPreset::WEBP_PRESET_DEFAULT,
+                75.0,
+                WEBP_ENCODER_ABI_VERSION as i32,
+            )
+        };
+        assert_ne!(ok, 0, "WebPConfigInitInternal failed");
+        config
+    }
+
+    #[test]
+    fn test_animframe_new_and_accessors() {
+        let img = [255u8, 0, 0, 255, 0, 255, 0, 255];
+        let frame = AnimFrame::new(&img, PixelLayout::Rgba, 2, 1, 42, None);
+        assert_eq!(frame.get_image(), &img);
+        assert_eq!(frame.get_layout(), PixelLayout::Rgba);
+        assert_eq!(frame.width(), 2);
+        assert_eq!(frame.height(), 1);
+        assert_eq!(frame.get_time_ms(), 42);
+    }
+
+    #[test]
+    fn test_animframe_from_rgb_and_rgba() {
+        let rgb = [1u8, 2, 3, 4, 5, 6];
+        let rgba = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        let f_rgb = AnimFrame::from_rgb(&rgb, 2, 1, 100);
+        let f_rgba = AnimFrame::from_rgba(&rgba, 2, 1, 200);
+        assert_eq!(f_rgb.get_layout(), PixelLayout::Rgb);
+        assert_eq!(f_rgba.get_layout(), PixelLayout::Rgba);
+        assert_eq!(f_rgb.get_time_ms(), 100);
+        assert_eq!(f_rgba.get_time_ms(), 200);
+    }
+
+    #[test]
+    fn test_animencoder_add_and_configure() {
+        let config = default_config();
+        let mut encoder = AnimEncoder::new(2, 1, &config);
+        encoder.set_bgcolor([1, 2, 3, 4]);
+        encoder.set_loop_count(3);
+
+        let frame = AnimFrame::from_rgb(&[1, 2, 3, 4, 5, 6], 2, 1, 0);
+        encoder.add_frame(frame);
+
+        assert_eq!(encoder.frames.len(), 1);
+        assert_eq!(encoder.width, 2);
+        assert_eq!(encoder.height, 1);
+        assert_eq!(encoder.muxparams.loop_count, 3);
+
+        let expected_bg = (4u32 << 24) | (3u32 << 16) | (2u32 << 8) | 1u32;
+        assert_eq!(encoder.muxparams.bgcolor, expected_bg);
+    }
+
+    #[test]
+    fn test_animencoder_encode_error_on_empty() {
+        let config = default_config();
+        let encoder = AnimEncoder::new(2, 1, &config);
+        let result = encoder.try_encode();
+        assert!(
+            result.is_err(),
+            "Encoding with no frames should fail or error"
+        );
+    }
+
+    #[test]
+    fn test_animdecoder_decode_failure_on_invalid_data() {
+        let data = vec![0u8; 10];
+        let decoder = AnimDecoder::new(&data);
+        let result = decoder.decode();
+        assert!(result.is_err(), "Decoding should fail for invalid data");
+    }
 }
