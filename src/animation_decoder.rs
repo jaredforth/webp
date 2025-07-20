@@ -152,3 +152,90 @@ impl<'a> IntoIterator for &'a DecodeAnimImage {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn minimal_webp_animation() -> Vec<u8> {
+        vec![
+            0x52, 0x49, 0x46, 0x46, 0x84, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50,
+            0x38, 0x58, 0x0a, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x41, 0x4e, 0x49, 0x4d, 0x06, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+            0x00, 0x00, 0x41, 0x4e, 0x4d, 0x46, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x02, 0x56, 0x50,
+            0x38, 0x4c, 0x0f, 0x00, 0x00, 0x00, 0x2f, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0xfd,
+            0x8f, 0xfe, 0x07, 0x22, 0xa2, 0xff, 0x01, 0x00, 0x41, 0x4e, 0x4d, 0x46, 0x28, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x64, 0x00, 0x00, 0x00, 0x56, 0x50, 0x38, 0x4c, 0x0f, 0x00, 0x00, 0x00, 0x2f, 0x00,
+            0x00, 0x00, 0x00, 0x07, 0x10, 0xd1, 0xff, 0xfe, 0x07, 0x22, 0xa2, 0xff, 0x01, 0x00,
+        ]
+    }
+
+    #[test]
+    fn test_decoder_creation() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        assert_eq!(decoder.data, &data[..]);
+    }
+
+    #[test]
+    fn test_decode_success_and_metadata() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        let result = decoder.decode();
+        assert!(result.is_ok(), "Decoding should succeed for valid data");
+        let anim = result.unwrap();
+        assert!(anim.len() > 0, "Animation should have at least one frame");
+        let _ = anim.loop_count;
+        let _ = anim.bg_color;
+    }
+
+    #[test]
+    fn test_get_frame_and_get_frames() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        let anim = decoder.decode().unwrap();
+        let frame = anim.get_frame(0);
+        assert!(frame.is_some(), "Should retrieve first frame");
+        let frames = anim.get_frames(0..1);
+        assert!(frames.is_some(), "Should retrieve frame range");
+        assert_eq!(frames.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_has_animation_and_len() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        let anim = decoder.decode().unwrap();
+        assert_eq!(anim.has_animation(), anim.len() > 1);
+    }
+
+    #[test]
+    fn test_sort_by_time_stamp() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        let mut anim = decoder.decode().unwrap();
+        anim.frames.reverse();
+        anim.sort_by_time_stamp();
+        let timestamps: Vec<_> = anim.frames.iter().map(|f| f.timestamp).collect();
+        assert!(timestamps.windows(2).all(|w| w[0] <= w[1]));
+    }
+
+    #[test]
+    fn test_iteration() {
+        let data = minimal_webp_animation();
+        let decoder = AnimDecoder::new(&data);
+        let anim = decoder.decode().unwrap();
+        let count = anim.into_iter().count();
+        assert_eq!(count, anim.len());
+    }
+
+    #[test]
+    fn test_decode_failure_on_invalid_data() {
+        let data = vec![0u8; 10];
+        let decoder = AnimDecoder::new(&data);
+        let result = decoder.decode();
+        assert!(result.is_err(), "Decoding should fail for invalid data");
+    }
+}
