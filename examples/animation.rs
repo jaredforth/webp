@@ -18,7 +18,7 @@ fn main() {
     config.lossless = 1;
     config.alpha_compression = 0;
     config.quality = 75f32;
-    let mut encoder = AnimEncoder::new(width as u32, height as u32, &config);
+    let mut encoder = AnimEncoder::new(width, height, &config);
     encoder.set_bgcolor([255, 0, 0, 255]);
     encoder.set_loop_count(3);
     let mut time_ms = 1000;

@@ -244,8 +244,7 @@ mod tests {
             assert!(dbg.contains(&format!("has_animation: {}", features.has_animation())));
             assert!(
                 dbg.contains(format_str),
-                "Debug output missing expected format string: {}",
-                format_str
+                "Debug output missing expected format string: {format_str}"
             );
         }
     }

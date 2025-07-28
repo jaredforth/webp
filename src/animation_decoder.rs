@@ -1,7 +1,8 @@
+#![allow(clippy::uninit_vec)]
 use libwebp_sys::*;
 
-use crate::shared::PixelLayout;
 use crate::AnimFrame;
+use crate::shared::PixelLayout;
 
 pub struct AnimDecoder<'a> {
     data: &'a [u8],
@@ -14,69 +15,72 @@ impl<'a> AnimDecoder<'a> {
         unsafe { self.decode_internal(true) }
     }
     unsafe fn decode_internal(&self, mut has_alpha: bool) -> Result<DecodeAnimImage, String> {
-        let mut dec_options: WebPAnimDecoderOptions = std::mem::zeroed();
-        dec_options.color_mode = if has_alpha {
-            WEBP_CSP_MODE::MODE_RGBA
-        } else {
-            WEBP_CSP_MODE::MODE_RGB
-        };
-        let ok = WebPAnimDecoderOptionsInitInternal(&mut dec_options, WebPGetDemuxABIVersion());
-        if ok == 0 {
-            return Err(String::from("option init error"));
-        }
-        match dec_options.color_mode {
-            WEBP_CSP_MODE::MODE_RGBA | WEBP_CSP_MODE::MODE_RGB => {}
-            _ => return Err(String::from("unsupport color mode")),
-        }
-        has_alpha = dec_options.color_mode == WEBP_CSP_MODE::MODE_RGBA;
-        let webp_data = WebPData {
-            bytes: self.data.as_ptr(),
-            size: self.data.len(),
-        };
-        let dec = WebPAnimDecoderNewInternal(&webp_data, &dec_options, WebPGetDemuxABIVersion());
-        if dec.is_null() {
-            return Err(String::from("null_decoder"));
-        }
-        let mut anim_info: WebPAnimInfo = std::mem::zeroed();
-        let ok = WebPAnimDecoderGetInfo(dec, &mut anim_info);
-        if ok == 0 {
-            return Err(String::from("null info"));
-        }
-        let width = anim_info.canvas_width;
-        let height = anim_info.canvas_height;
-        let mut list: Vec<DecodeAnimFrame> = vec![];
-        while WebPAnimDecoderHasMoreFrames(dec) > 0 {
-            let mut buf: *mut u8 = std::ptr::null_mut();
-            let mut timestamp: std::os::raw::c_int = 0;
-            let ok = WebPAnimDecoderGetNext(dec, &mut buf, &mut timestamp);
-            if ok != 0 {
-                let len = (if has_alpha { 4 } else { 3 } * width * height) as usize;
-                let mut img = Vec::with_capacity(len);
-                img.set_len(len);
-                buf.copy_to(img.as_mut_ptr(), len);
-                let layout = if has_alpha {
-                    PixelLayout::Rgba
-                } else {
-                    PixelLayout::Rgb
-                };
-                let frame = DecodeAnimFrame {
-                    img,
-                    width,
-                    height,
-                    layout,
-                    timestamp,
-                };
-                list.push(frame);
+        unsafe {
+            let mut dec_options: WebPAnimDecoderOptions = std::mem::zeroed();
+            dec_options.color_mode = if has_alpha {
+                WEBP_CSP_MODE::MODE_RGBA
+            } else {
+                WEBP_CSP_MODE::MODE_RGB
+            };
+            let ok = WebPAnimDecoderOptionsInitInternal(&mut dec_options, WebPGetDemuxABIVersion());
+            if ok == 0 {
+                return Err(String::from("option init error"));
             }
+            match dec_options.color_mode {
+                WEBP_CSP_MODE::MODE_RGBA | WEBP_CSP_MODE::MODE_RGB => {}
+                _ => return Err(String::from("unsupport color mode")),
+            }
+            has_alpha = dec_options.color_mode == WEBP_CSP_MODE::MODE_RGBA;
+            let webp_data = WebPData {
+                bytes: self.data.as_ptr(),
+                size: self.data.len(),
+            };
+            let dec =
+                WebPAnimDecoderNewInternal(&webp_data, &dec_options, WebPGetDemuxABIVersion());
+            if dec.is_null() {
+                return Err(String::from("null_decoder"));
+            }
+            let mut anim_info: WebPAnimInfo = std::mem::zeroed();
+            let ok = WebPAnimDecoderGetInfo(dec, &mut anim_info);
+            if ok == 0 {
+                return Err(String::from("null info"));
+            }
+            let width = anim_info.canvas_width;
+            let height = anim_info.canvas_height;
+            let mut list: Vec<DecodeAnimFrame> = vec![];
+            while WebPAnimDecoderHasMoreFrames(dec) > 0 {
+                let mut buf: *mut u8 = std::ptr::null_mut();
+                let mut timestamp: std::os::raw::c_int = 0;
+                let ok = WebPAnimDecoderGetNext(dec, &mut buf, &mut timestamp);
+                if ok != 0 {
+                    let len = (if has_alpha { 4 } else { 3 } * width * height) as usize;
+                    let mut img = Vec::with_capacity(len);
+                    img.set_len(len);
+                    buf.copy_to(img.as_mut_ptr(), len);
+                    let layout = if has_alpha {
+                        PixelLayout::Rgba
+                    } else {
+                        PixelLayout::Rgb
+                    };
+                    let frame = DecodeAnimFrame {
+                        img,
+                        width,
+                        height,
+                        layout,
+                        timestamp,
+                    };
+                    list.push(frame);
+                }
+            }
+            WebPAnimDecoderReset(dec);
+            //let demuxer:WebPDemuxer=WebPAnimDecoderGetDemuxer(dec);
+            // ... (Do something using 'demuxer'; e.g. get EXIF/XMP/ICC data).
+            WebPAnimDecoderDelete(dec);
+            let mut anim = DecodeAnimImage::from(list);
+            anim.loop_count = anim_info.loop_count;
+            anim.bg_color = anim_info.bgcolor;
+            Ok(anim)
         }
-        WebPAnimDecoderReset(dec);
-        //let demuxer:WebPDemuxer=WebPAnimDecoderGetDemuxer(dec);
-        // ... (Do something using 'demuxer'; e.g. get EXIF/XMP/ICC data).
-        WebPAnimDecoderDelete(dec);
-        let mut anim = DecodeAnimImage::from(list);
-        anim.loop_count = anim_info.loop_count;
-        anim.bg_color = anim_info.bgcolor;
-        Ok(anim)
     }
 }
 struct DecodeAnimFrame {
@@ -132,6 +136,11 @@ impl DecodeAnimImage {
     pub fn len(&self) -> usize {
         self.frames.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+
     pub fn has_animation(&self) -> bool {
         self.len() > 1
     }
@@ -186,7 +195,7 @@ mod tests {
         let result = decoder.decode();
         assert!(result.is_ok(), "Decoding should succeed for valid data");
         let anim = result.unwrap();
-        assert!(anim.len() > 0, "Animation should have at least one frame");
+        assert!(!anim.is_empty(), "Animation should have at least one frame");
         let _ = anim.loop_count;
         let _ = anim.bg_color;
     }

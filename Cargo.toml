@@ -1,8 +1,8 @@
 [package]
 name = "webp"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Jared Forth <jaredforthdev@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 description = "WebP conversion library."
 
@@ -20,7 +20,7 @@ image = { version = "^0.25.0", default-features = false, optional = true }
 
 [features]
 default = ["img"]
-img = [ "image" ]
+img = ["image"]
 
 [dev-dependencies]
 image = "0.25"
