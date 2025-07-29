@@ -15,7 +15,7 @@ keywords = ["image", "webp", "conversion"]
 categories = ["external-ffi-bindings"]
 
 [dependencies]
-libwebp-sys = { git = "https://github.com/lucascompython/libwebp-sys", branch = "master" } # Change to libwebp-sys crate once: https://github.com/NoXF/libwebp-sys/pull/37 is aproved
+libwebp-sys = "0.13"
 image = { version = "^0.25.0", default-features = false, optional = true }
 
 [features]
