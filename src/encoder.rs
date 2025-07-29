@@ -90,8 +90,7 @@ impl<'a> Encoder<'a> {
     pub fn encode_advanced(&self, config: &WebPConfig) -> Result<WebPMemory, WebPEncodingError> {
         unsafe {
             let mut picture = new_picture(self.image, self.layout, self.width, self.height);
-            let res = encode(&mut *picture, config);
-            res
+            encode(&mut picture, config)
         }
     }
 }
@@ -107,12 +106,12 @@ pub(crate) unsafe fn new_picture(
     picture.width = width as i32;
     picture.height = height as i32;
     match layout {
-        PixelLayout::Rgba => {
+        PixelLayout::Rgba => unsafe {
             WebPPictureImportRGBA(&mut picture, image.as_ptr(), width as i32 * 4);
-        }
-        PixelLayout::Rgb => {
+        },
+        PixelLayout::Rgb => unsafe {
             WebPPictureImportRGB(&mut picture, image.as_ptr(), width as i32 * 3);
-        }
+        },
     }
     ManageedPicture(picture)
 }
@@ -120,20 +119,23 @@ unsafe fn encode(
     picture: &mut WebPPicture,
     config: &WebPConfig,
 ) -> Result<WebPMemory, WebPEncodingError> {
-    if WebPValidateConfig(config) == 0 {
-        return Err(WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION);
-    }
-    let mut ww = std::mem::MaybeUninit::uninit();
-    WebPMemoryWriterInit(ww.as_mut_ptr());
-    picture.writer = Some(WebPMemoryWrite);
-    picture.custom_ptr = ww.as_mut_ptr() as *mut std::ffi::c_void;
-    let status = libwebp_sys::WebPEncode(config, picture);
-    let ww = ww.assume_init();
-    let mem = WebPMemory(ww.mem, ww.size as usize);
-    if status != VP8StatusCode::VP8_STATUS_OK as i32 {
-        Ok(mem)
-    } else {
-        Err(picture.error_code)
+    unsafe {
+        if WebPValidateConfig(config) == 0 {
+            return Err(WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION);
+        }
+        let mut ww = std::mem::MaybeUninit::uninit();
+        WebPMemoryWriterInit(ww.as_mut_ptr());
+        picture.writer = Some(WebPMemoryWrite);
+        picture.custom_ptr = ww.as_mut_ptr() as *mut std::ffi::c_void;
+        let status = libwebp_sys::WebPEncode(config, picture);
+        let ww = ww.assume_init();
+        let mem = WebPMemory(ww.mem, ww.size);
+
+        if status != VP8StatusCode::VP8_STATUS_OK as i32 {
+            Ok(mem)
+        } else {
+            Err(picture.error_code)
+        }
     }
 }
 

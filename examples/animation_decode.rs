@@ -36,12 +36,11 @@ fn main() {
     let webp = std::fs::read(input).unwrap();
     match AnimDecoder::new(&webp).decode() {
         Ok(frames) => {
-            let mut file_number = 0;
             println!("has_animation {}", frames.has_animation());
             println!("loop_count {}", frames.loop_count);
             println!("bg_color {}", frames.bg_color);
             let mut last_ms = 0;
-            for f in frames.into_iter() {
+            for (file_number, f) in frames.into_iter().enumerate() {
                 let delay_ms = f.get_time_ms() - last_ms;
                 println!(
                     "{}x{} {:?} time{}ms delay{}ms",
@@ -54,14 +53,13 @@ fn main() {
                 last_ms += delay_ms;
                 let webp = Encoder::from(&f).encode_simple(true, 100f32);
                 let output = std::path::Path::new("assets")
-                    .join(format!("{}{}", src, file_number))
+                    .join(format!("{src}{file_number}"))
                     .with_extension("webp");
-                file_number += 1;
                 std::fs::write(&output, &*webp.unwrap()).unwrap();
             }
         }
         Err(mes) => {
-            println!("{}", mes);
+            println!("{mes}");
         }
     }
 }
