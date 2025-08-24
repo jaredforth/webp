@@ -21,7 +21,7 @@ impl<'a> Encoder<'a> {
 
     #[cfg(feature = "img")]
     /// Creates a new encoder from the given image.
-    pub fn from_image(image: &'a DynamicImage) -> Result<Self, &str> {
+    pub fn from_image(image: &'a DynamicImage) -> Result<Self, &'a str> {
         match image {
             DynamicImage::ImageLuma8(_) => Err("Unimplemented"),
             DynamicImage::ImageLumaA8(_) => Err("Unimplemented"),
@@ -219,10 +219,63 @@ unsafe fn encode(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared;
 
     #[test]
     #[should_panic]
     fn construct_encoder_with_buffer_overflow() {
         Encoder::from_rgb(&[], 16383, 16383);
+    }
+
+    #[test]
+    fn test_encoder_new_assigns_fields() {
+        let data = [1, 2, 3, 4, 5, 6];
+        let enc = Encoder::new(&data, shared::PixelLayout::Rgb, 2, 3);
+        assert_eq!(enc.image, &data);
+        assert_eq!(enc.layout, shared::PixelLayout::Rgb);
+        assert_eq!(enc.width, 2);
+        assert_eq!(enc.height, 3);
+    }
+
+    #[test]
+    fn test_encoder_from_rgb_and_rgba() {
+        let rgb = [10, 20, 30, 40, 50, 60];
+        let rgba = [1, 2, 3, 4, 5, 6, 7, 8];
+        let enc_rgb = Encoder::from_rgb(&rgb, 2, 1);
+        let enc_rgba = Encoder::from_rgba(&rgba, 2, 1);
+        assert_eq!(enc_rgb.layout, shared::PixelLayout::Rgb);
+        assert_eq!(enc_rgba.layout, shared::PixelLayout::Rgba);
+        assert_eq!(enc_rgb.image, &rgb);
+        assert_eq!(enc_rgba.image, &rgba);
+        assert_eq!(enc_rgb.width, 2);
+        assert_eq!(enc_rgba.height, 1);
+    }
+
+    #[cfg(feature = "img")]
+    #[test]
+    fn test_encoder_from_image_error_branches() {
+        use image::{DynamicImage, ImageBuffer};
+
+        let luma = DynamicImage::ImageLuma8(ImageBuffer::from_pixel(1, 1, image::Luma([0])));
+        let luma_a = DynamicImage::ImageLumaA8(ImageBuffer::from_pixel(1, 1, image::LumaA([0, 0])));
+        assert!(Encoder::from_image(&luma).is_err());
+        assert!(Encoder::from_image(&luma_a).is_err());
+
+        let rgb = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([1, 2, 3])));
+        let rgba =
+            DynamicImage::ImageRgba8(ImageBuffer::from_pixel(2, 2, image::Rgba([1, 2, 3, 4])));
+        assert!(Encoder::from_image(&rgb).is_ok());
+        assert!(Encoder::from_image(&rgba).is_ok());
+    }
+
+    #[test]
+    fn test_encode_runs_without_panic() {
+        let width = 2;
+        let height = 2;
+        let image = [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0];
+        let encoder = Encoder::new(&image, PixelLayout::Rgb, width, height);
+
+        let mem = encoder.encode(75.0);
+        assert!(!mem.is_empty());
     }
 }
