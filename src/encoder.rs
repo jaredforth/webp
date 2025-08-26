@@ -231,10 +231,10 @@ mod tests {
     fn test_encoder_new_assigns_fields() {
         let data = [1, 2, 3, 4, 5, 6];
         let enc = Encoder::new(&data, shared::PixelLayout::Rgb, 2, 3);
-        assert_eq!(enc.image, &data);
-        assert_eq!(enc.layout, shared::PixelLayout::Rgb);
-        assert_eq!(enc.width, 2);
-        assert_eq!(enc.height, 3);
+        assert_eq!(enc.e.image(), &data);
+        assert_eq!(enc.e.layout(), shared::PixelLayout::Rgb);
+        assert_eq!(enc.e.width(), 2);
+        assert_eq!(enc.e.height(), 3);
     }
 
     #[test]
@@ -243,12 +243,12 @@ mod tests {
         let rgba = [1, 2, 3, 4, 5, 6, 7, 8];
         let enc_rgb = Encoder::from_rgb(&rgb, 2, 1);
         let enc_rgba = Encoder::from_rgba(&rgba, 2, 1);
-        assert_eq!(enc_rgb.layout, shared::PixelLayout::Rgb);
-        assert_eq!(enc_rgba.layout, shared::PixelLayout::Rgba);
-        assert_eq!(enc_rgb.image, &rgb);
-        assert_eq!(enc_rgba.image, &rgba);
-        assert_eq!(enc_rgb.width, 2);
-        assert_eq!(enc_rgba.height, 1);
+        assert_eq!(enc_rgb.e.layout(), shared::PixelLayout::Rgb);
+        assert_eq!(enc_rgba.e.layout(), shared::PixelLayout::Rgba);
+        assert_eq!(enc_rgb.e.image(), &rgb);
+        assert_eq!(enc_rgba.e.image(), &rgba);
+        assert_eq!(enc_rgb.e.width(), 2);
+        assert_eq!(enc_rgba.e.height(), 1);
     }
 
     #[cfg(feature = "img")]
