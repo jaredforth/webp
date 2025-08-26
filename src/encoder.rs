@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_encoder_new_assigns_fields() {
-        let data = [1, 2, 3, 4, 5, 6];
+        let data = [5; 18];
         let enc = Encoder::new(&data, shared::PixelLayout::Rgb, 2, 3);
         assert_eq!(enc.e.image(), &data);
         assert_eq!(enc.e.layout(), shared::PixelLayout::Rgb);
