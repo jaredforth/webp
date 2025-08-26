@@ -208,7 +208,7 @@ unsafe fn encode(
     picture.custom_ptr = ww.as_mut_ptr() as *mut std::ffi::c_void;
     let status = libwebp_sys::WebPEncode(config, picture);
     let ww = ww.assume_init();
-    let mem = WebPMemory(ww.mem, ww.size as usize);
+    let mem = WebPMemory(ww.mem, ww.size);
     if status != VP8StatusCode::VP8_STATUS_OK as i32 {
         Ok(mem)
     } else {
