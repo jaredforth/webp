@@ -21,7 +21,7 @@ impl<'a> Encoder<'a> {
 
     #[cfg(feature = "img")]
     /// Creates a new encoder from the given image.
-    pub fn from_image(image: &'a DynamicImage) -> Result<Self, &'a str> {
+    pub fn from_image(image: &'a DynamicImage) -> Result<Self, &'static str> {
         match image {
             DynamicImage::ImageLuma8(_) => Err("Unimplemented"),
             DynamicImage::ImageLumaA8(_) => Err("Unimplemented"),
