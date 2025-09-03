@@ -31,7 +31,7 @@ impl<'a> AnimFrame<'a> {
         }
     }
     #[cfg(feature = "img")]
-    pub fn from_image(image: &'a DynamicImage, timestamp: i32) -> Result<Self, &'a str> {
+    pub fn from_image(image: &'a DynamicImage, timestamp: i32) -> Result<Self, &'static str> {
         match image {
             DynamicImage::ImageLuma8(_) => Err("Unimplemented"),
             DynamicImage::ImageLumaA8(_) => Err("Unimplemented"),
