@@ -1,11 +1,8 @@
 #[cfg(feature = "img")]
-use image::DynamicImage;
+use image::{DynamicImage, ImageBuffer};
 use libwebp_sys::*;
 
-#[cfg(feature = "img")]
-use image::*;
-
-use crate::{Encoder, shared::*};
+use crate::{shared::*, Encoder};
 
 pub struct AnimFrame<'a> {
     image: &'a [u8],
@@ -84,15 +81,15 @@ impl<'a> From<&'a AnimFrame<'a>> for Encoder<'a> {
 }
 #[cfg(feature = "img")]
 impl From<&AnimFrame<'_>> for DynamicImage {
-    fn from(val: &AnimFrame<'_>) -> Self {
-        if val.layout.is_alpha() {
+    fn from(value: &AnimFrame<'_>) -> DynamicImage {
+        if value.layout.is_alpha() {
             let image =
-                ImageBuffer::from_raw(val.width(), val.height(), val.get_image().to_owned())
+                ImageBuffer::from_raw(value.width(), value.height(), value.get_image().to_owned())
                     .expect("ImageBuffer couldn't be created");
             DynamicImage::ImageRgba8(image)
         } else {
             let image =
-                ImageBuffer::from_raw(val.width(), val.height(), val.get_image().to_owned())
+                ImageBuffer::from_raw(value.width(), value.height(), value.get_image().to_owned())
                     .expect("ImageBuffer couldn't be created");
             DynamicImage::ImageRgb8(image)
         }
@@ -215,8 +212,8 @@ unsafe fn anim_encode(all_frame: &AnimEncoder) -> Result<WebPMemory, AnimEncodeE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::AnimDecoder;
     use crate::shared::PixelLayout;
+    use crate::AnimDecoder;
 
     fn default_config() -> WebPConfig {
         let mut config = unsafe { std::mem::zeroed() };

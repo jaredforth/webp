@@ -139,6 +139,13 @@ impl PixelLayout {
     pub fn is_alpha(self) -> bool {
         self == PixelLayout::Rgba
     }
+
+    pub fn bytes_per_pixel(self) -> u8 {
+        match self {
+            PixelLayout::Rgb => 3,
+            PixelLayout::Rgba => 4,
+        }
+    }
 }
 
 #[cfg(test)]

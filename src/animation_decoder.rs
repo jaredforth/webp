@@ -1,8 +1,8 @@
 #![allow(clippy::uninit_vec)]
 use libwebp_sys::*;
 
-use crate::AnimFrame;
 use crate::shared::PixelLayout;
+use crate::AnimFrame;
 
 pub struct AnimDecoder<'a> {
     data: &'a [u8],
@@ -55,8 +55,8 @@ impl<'a> AnimDecoder<'a> {
                 if ok != 0 {
                     let len = (if has_alpha { 4 } else { 3 } * width * height) as usize;
                     let mut img = Vec::with_capacity(len);
+                    buf.copy_to(img.spare_capacity_mut().as_mut_ptr().cast(), len);
                     img.set_len(len);
-                    buf.copy_to(img.as_mut_ptr(), len);
                     let layout = if has_alpha {
                         PixelLayout::Rgba
                     } else {
