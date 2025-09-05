@@ -106,7 +106,7 @@ impl From<Vec<DecodeAnimFrame>> for DecodeAnimImage {
 }
 impl DecodeAnimImage {
     #[inline]
-    pub fn get_frame(&self, index: usize) -> Option<AnimFrame> {
+    pub fn get_frame(&self, index: usize) -> Option<AnimFrame<'_>> {
         let f = self.frames.get(index)?;
         Some(AnimFrame::new(
             &f.img,
@@ -118,7 +118,7 @@ impl DecodeAnimImage {
         ))
     }
     #[inline]
-    pub fn get_frames(&self, index: core::ops::Range<usize>) -> Option<Vec<AnimFrame>> {
+    pub fn get_frames(&self, index: core::ops::Range<usize>) -> Option<Vec<AnimFrame<'_>>> {
         let dec_frames = self.frames.get(index)?;
         let mut frames = Vec::with_capacity(dec_frames.len());
         for f in dec_frames {
