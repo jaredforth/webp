@@ -220,7 +220,7 @@ mod tests {
 
         let mem = WebPMemory(ptr, len);
 
-        let dbg_str = format!("{:?}", mem);
+        let dbg_str = format!("{mem:?}");
 
         assert_eq!(dbg_str, "WebpMemory");
     }
@@ -230,7 +230,7 @@ mod tests {
         let pic = unsafe { std::mem::zeroed::<WebPPicture>() };
         let managed = ManageedPicture(pic);
 
-        let inner_ref: &WebPPicture = &*managed;
+        let inner_ref: &WebPPicture = &managed;
         let orig_ptr = &managed.0 as *const WebPPicture;
         let deref_ptr = inner_ref as *const WebPPicture;
         assert_eq!(orig_ptr, deref_ptr);

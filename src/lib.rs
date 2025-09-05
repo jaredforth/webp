@@ -187,7 +187,7 @@ mod tests {
                 decode_images.extend((&frames).into_iter().map(|a| (&a).into()));
             }
             Err(mes) => {
-                println!("{}", mes);
+                println!("{mes}");
             }
         }
         let mut encode_rgba = vec![];
