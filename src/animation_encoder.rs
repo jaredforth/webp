@@ -132,6 +132,7 @@ impl<'a> AnimEncoder<'a> {
         self.try_encode().unwrap()
     }
     pub fn try_encode(&self) -> Result<WebPMemory, AnimEncodeError> {
+        validate_animation_frames(self)?;
         unsafe { anim_encode(self) }
     }
 }
@@ -142,6 +143,37 @@ pub enum AnimEncodeError {
     WebPMuxError(WebPMuxError),
     WebPAnimEncoderGetError(String),
 }
+
+fn invalid_config() -> AnimEncodeError {
+    AnimEncodeError::WebPEncodingError(WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION)
+}
+
+fn validate_animation_frames(encoder: &AnimEncoder) -> Result<(), AnimEncodeError> {
+    for frame in &encoder.frames {
+        // The WebP container can store smaller ANMF rectangles with offsets, and
+        // a future API could expose that either by compositing frames onto a full
+        // canvas here or by using WebPMuxFrameInfo directly. This crate's
+        // AnimFrame has no offset/blend/dispose fields, and libwebp's
+        // WebPAnimEncoderAdd expects full canvas snapshots; it then optimizes
+        // them into subframes internally. Passing smaller frames never worked:
+        // the old code imported them as canvas-sized images and read trailing
+        // bytes as pixels. Reject them before reaching the C API
+        // to avoid libwebp reading out of bounds of the provided buffer.
+        if frame.width != encoder.width || frame.height != encoder.height {
+            return Err(invalid_config());
+        }
+
+        let expected_len = (frame.width as usize)
+            .saturating_mul(frame.height as usize)
+            .saturating_mul(frame.layout.bytes_per_pixel() as usize);
+        if frame.image.len() < expected_len {
+            return Err(invalid_config());
+        }
+    }
+
+    Ok(())
+}
+
 unsafe fn anim_encode(all_frame: &AnimEncoder) -> Result<WebPMemory, AnimEncodeError> {
     let width = all_frame.width;
     let height = all_frame.height;
@@ -274,6 +306,44 @@ mod tests {
             result.is_err(),
             "Encoding with no frames should fail or error"
         );
+    }
+
+    #[test]
+    fn animencoder_rejects_frames_smaller_than_canvas() {
+        let mut config = default_config();
+        config.lossless = 1;
+        config.quality = 100.0;
+
+        let image = [
+            250, 0, 0, // Declared 1x1 frame data.
+            0, 250, 0, // Trailing data that is not part of the frame.
+            0, 0, 250, //
+            250, 250, 0, //
+        ];
+
+        let mut encoder = AnimEncoder::new(2, 2, &config);
+        encoder.add_frame(AnimFrame::from_rgb(&image, 1, 1, 0));
+
+        assert!(matches!(
+            encoder.try_encode(),
+            Err(AnimEncodeError::WebPEncodingError(
+                WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION
+            ))
+        ));
+    }
+
+    #[test]
+    fn animencoder_rejects_frame_buffers_that_are_too_small() {
+        let config = default_config();
+        let mut encoder = AnimEncoder::new(2, 2, &config);
+        encoder.add_frame(AnimFrame::from_rgb(&[0, 0, 0], 2, 2, 0));
+
+        assert!(matches!(
+            encoder.try_encode(),
+            Err(AnimEncodeError::WebPEncodingError(
+                WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION
+            ))
+        ));
     }
 
     #[test]
