@@ -26,7 +26,7 @@ pub use shared::*;
 
 pub use libwebp_sys::WebPConfig;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "img"))]
 mod tests {
     use std::ops::Deref;
 
@@ -181,15 +181,8 @@ mod tests {
             t += 250;
         }
         let webp = encoder.encode();
-        let mut decode_images: Vec<DynamicImage> = vec![];
-        match AnimDecoder::new(&webp).decode() {
-            Ok(frames) => {
-                decode_images.extend((&frames).into_iter().map(|a| (&a).into()));
-            }
-            Err(mes) => {
-                println!("{}", mes);
-            }
-        }
+        let frames = AnimDecoder::new(&webp).decode().unwrap();
+        let decode_images: Vec<DynamicImage> = frames.into_iter().map(|a| (&a).into()).collect();
         let mut encode_rgba = vec![];
         for v in encode_images.into_iter() {
             let value = DynamicImage::ImageRgba8(v.to_rgba8());

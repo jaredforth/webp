@@ -11,24 +11,16 @@ impl<'a> AnimDecoder<'a> {
         Self { data }
     }
     pub fn decode(&self) -> Result<DecodeAnimImage, String> {
-        unsafe { self.decode_internal(true) }
+        unsafe { self.decode_internal() }
     }
-    unsafe fn decode_internal(&self, mut has_alpha: bool) -> Result<DecodeAnimImage, String> {
+    // libwebp's animation decoder only outputs RGBA-family modes, so frames are always RGBA.
+    unsafe fn decode_internal(&self) -> Result<DecodeAnimImage, String> {
         let mut dec_options: WebPAnimDecoderOptions = std::mem::zeroed();
-        dec_options.color_mode = if has_alpha {
-            WEBP_CSP_MODE::MODE_RGBA
-        } else {
-            WEBP_CSP_MODE::MODE_RGB
-        };
         let ok = WebPAnimDecoderOptionsInitInternal(&mut dec_options, WebPGetDemuxABIVersion());
         if ok == 0 {
             return Err(String::from("option init error"));
         }
-        match dec_options.color_mode {
-            WEBP_CSP_MODE::MODE_RGBA | WEBP_CSP_MODE::MODE_RGB => {}
-            _ => return Err(String::from("unsupport color mode")),
-        }
-        has_alpha = dec_options.color_mode == WEBP_CSP_MODE::MODE_RGBA;
+        dec_options.color_mode = WEBP_CSP_MODE::MODE_RGBA;
         let webp_data = WebPData {
             bytes: self.data.as_ptr(),
             size: self.data.len(),
@@ -40,6 +32,7 @@ impl<'a> AnimDecoder<'a> {
         let mut anim_info: WebPAnimInfo = std::mem::zeroed();
         let ok = WebPAnimDecoderGetInfo(dec, &mut anim_info);
         if ok == 0 {
+            WebPAnimDecoderDelete(dec);
             return Err(String::from("null info"));
         }
         let width = anim_info.canvas_width;
@@ -49,25 +42,21 @@ impl<'a> AnimDecoder<'a> {
             let mut buf: *mut u8 = std::ptr::null_mut();
             let mut timestamp: std::os::raw::c_int = 0;
             let ok = WebPAnimDecoderGetNext(dec, &mut buf, &mut timestamp);
-            if ok != 0 {
-                let len = (if has_alpha { 4 } else { 3 } * width * height) as usize;
-                let mut img = Vec::with_capacity(len);
-                buf.copy_to(img.spare_capacity_mut().as_mut_ptr().cast(), len);
-                img.set_len(len);
-                let layout = if has_alpha {
-                    PixelLayout::Rgba
-                } else {
-                    PixelLayout::Rgb
-                };
-                let frame = DecodeAnimFrame {
-                    img,
-                    width,
-                    height,
-                    layout,
-                    timestamp,
-                };
-                list.push(frame);
+            if ok == 0 {
+                WebPAnimDecoderDelete(dec);
+                return Err(String::from("frame decode error"));
             }
+            let len = (4 * width * height) as usize;
+            let mut img = Vec::with_capacity(len);
+            buf.copy_to(img.spare_capacity_mut().as_mut_ptr().cast(), len);
+            img.set_len(len);
+            list.push(DecodeAnimFrame {
+                img,
+                width,
+                height,
+                layout: PixelLayout::Rgba,
+                timestamp,
+            });
         }
         WebPAnimDecoderReset(dec);
         //let demuxer:WebPDemuxer=WebPAnimDecoderGetDemuxer(dec);
@@ -102,7 +91,7 @@ impl From<Vec<DecodeAnimFrame>> for DecodeAnimImage {
 }
 impl DecodeAnimImage {
     #[inline]
-    pub fn get_frame(&self, index: usize) -> Option<AnimFrame> {
+    pub fn get_frame(&self, index: usize) -> Option<AnimFrame<'_>> {
         let f = self.frames.get(index)?;
         Some(AnimFrame::new(
             &f.img,
@@ -114,7 +103,7 @@ impl DecodeAnimImage {
         ))
     }
     #[inline]
-    pub fn get_frames(&self, index: core::ops::Range<usize>) -> Option<Vec<AnimFrame>> {
+    pub fn get_frames(&self, index: core::ops::Range<usize>) -> Option<Vec<AnimFrame<'_>>> {
         let dec_frames = self.frames.get(index)?;
         let mut frames = Vec::with_capacity(dec_frames.len());
         for f in dec_frames {
@@ -144,12 +133,9 @@ impl<'a> IntoIterator for &'a DecodeAnimImage {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let fs = self.get_frames(0..self.frames.len());
-        if let Some(v) = fs {
-            v.into_iter()
-        } else {
-            vec![].into_iter()
-        }
+        self.get_frames(0..self.frames.len())
+            .unwrap_or_default()
+            .into_iter()
     }
 }
 
@@ -229,6 +215,37 @@ mod tests {
         let anim = decoder.decode().unwrap();
         let count = anim.into_iter().count();
         assert_eq!(count, anim.len());
+    }
+
+    #[test]
+    fn test_decode_corrupt_frame_is_error() {
+        let mut config = WebPConfig::new().unwrap();
+        config.lossless = 1;
+        let bufs: Vec<Vec<u8>> = (0..3)
+            .map(|t| {
+                (0..16 * 16 * 4)
+                    .map(|i| ((i * 7 + t * 31) % 256) as u8)
+                    .collect()
+            })
+            .collect();
+        let mut encoder = crate::AnimEncoder::new(16, 16, &config);
+        for (t, px) in bufs.iter().enumerate() {
+            encoder.add_frame(AnimFrame::from_rgba(px, 16, 16, t as i32 * 100));
+        }
+        let mut data = encoder.encode().to_vec();
+
+        // Corrupt the last frame's VP8L payload, leaving chunk headers intact.
+        let pos = data.windows(4).rposition(|w| w == b"VP8L").unwrap();
+        let size = u32::from_le_bytes(data[pos + 4..pos + 8].try_into().unwrap()) as usize;
+        for b in &mut data[pos + 8 + 6..pos + 8 + size] {
+            *b ^= 0xA5;
+        }
+
+        // Used to loop forever; must now fail instead of returning partial frames.
+        assert_eq!(
+            AnimDecoder::new(&data).decode().err().as_deref(),
+            Some("frame decode error")
+        );
     }
 
     #[test]

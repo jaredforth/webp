@@ -260,6 +260,8 @@ mod tests {
         let luma_a = DynamicImage::ImageLumaA8(ImageBuffer::from_pixel(1, 1, image::LumaA([0, 0])));
         assert!(Encoder::from_image(&luma).is_err());
         assert!(Encoder::from_image(&luma_a).is_err());
+        let rgb32f = DynamicImage::ImageRgb32F(image::Rgb32FImage::new(1, 1));
+        assert!(Encoder::from_image(&rgb32f).is_err());
 
         let rgb = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([1, 2, 3])));
         let rgba =
@@ -277,5 +279,31 @@ mod tests {
 
         let mem = encoder.encode(75.0);
         assert!(!mem.is_empty());
+    }
+
+    #[test]
+    fn test_oversized_buffer_is_accepted() {
+        let image = [0u8; 16];
+        let mem = Encoder::from_rgb(&image, 2, 2).encode_lossless();
+        assert!(!mem.is_empty());
+    }
+
+    #[test]
+    fn test_encode_invalid_config() {
+        let image = [0u8; 12];
+        let res = Encoder::from_rgb(&image, 2, 2).encode_simple(false, 200.0);
+        assert!(matches!(
+            res,
+            Err(WebPEncodingError::VP8_ENC_ERROR_INVALID_CONFIGURATION)
+        ));
+    }
+
+    #[test]
+    fn test_encode_zero_dimensions() {
+        let res = Encoder::from_rgb(&[], 0, 0).encode_simple(false, 75.0);
+        assert!(matches!(
+            res,
+            Err(WebPEncodingError::VP8_ENC_ERROR_BAD_DIMENSION)
+        ));
     }
 }
