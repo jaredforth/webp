@@ -189,10 +189,21 @@ mod tests {
 
     #[test]
     fn test_decoder_rejects_animation() {
+        let config = WebPConfig::new().unwrap();
+        let mut encoder = crate::AnimEncoder::new(1, 1, &config);
+        encoder.add_frame(crate::AnimFrame::from_rgb(&[0, 0, 0], 1, 1, 0));
+        encoder.add_frame(crate::AnimFrame::from_rgb(&[255, 255, 255], 1, 1, 100));
+        let data = encoder.encode();
+        assert!(BitstreamFeatures::new(&data).unwrap().has_animation());
+        assert!(Decoder::new(&data).decode().is_none());
+    }
+
+    #[test]
+    fn test_decoder_truncated_data() {
         let data = minimal_webp_rgb();
-        let decoder = Decoder::new(&data);
-        let image = decoder.decode();
-        assert!(image.is_some());
+        let truncated = &data[..data.len() - 8];
+        assert!(BitstreamFeatures::new(truncated).is_some());
+        assert!(Decoder::new(truncated).decode().is_none());
     }
 
     #[test]

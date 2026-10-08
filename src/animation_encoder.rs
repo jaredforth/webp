@@ -276,6 +276,67 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "img")]
+    #[test]
+    fn test_animframe_from_image() {
+        use image::{ImageBuffer, Luma, LumaA, Rgb, Rgb32FImage};
+
+        let luma = DynamicImage::ImageLuma8(ImageBuffer::from_pixel(1, 1, Luma([0])));
+        let luma_a = DynamicImage::ImageLumaA8(ImageBuffer::from_pixel(1, 1, LumaA([0, 0])));
+        let rgb32f = DynamicImage::ImageRgb32F(Rgb32FImage::new(1, 1));
+        assert!(AnimFrame::from_image(&luma, 0).is_err());
+        assert!(AnimFrame::from_image(&luma_a, 0).is_err());
+        assert!(AnimFrame::from_image(&rgb32f, 0).is_err());
+
+        let rgb = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 1, Rgb([1, 2, 3])));
+        let frame = AnimFrame::from_image(&rgb, 7).unwrap();
+        assert_eq!(frame.get_layout(), PixelLayout::Rgb);
+        assert_eq!(frame.get_time_ms(), 7);
+
+        // round-trip back into a DynamicImage via the RGB branch
+        assert_eq!(DynamicImage::from(&frame), rgb);
+    }
+
+    #[test]
+    fn test_encoder_from_animframe() {
+        let rgb = [1u8, 2, 3, 4, 5, 6];
+        let frame = AnimFrame::from_rgb(&rgb, 2, 1, 0);
+        let mem = Encoder::from(&frame).encode_lossless();
+        assert!(!mem.is_empty());
+    }
+
+    #[test]
+    fn test_animencoder_invalid_config() {
+        let config = default_config();
+        let mut bad = default_config();
+        bad.quality = 200.0;
+        let mut encoder = AnimEncoder::new(2, 1, &config);
+        encoder.add_frame(AnimFrame::new(
+            &[1, 2, 3, 4, 5, 6],
+            PixelLayout::Rgb,
+            2,
+            1,
+            0,
+            Some(&bad),
+        ));
+        assert!(matches!(
+            encoder.try_encode(),
+            Err(AnimEncodeError::WebPEncodingError(_))
+        ));
+    }
+
+    #[test]
+    fn test_animencoder_invalid_loop_count() {
+        let config = default_config();
+        let mut encoder = AnimEncoder::new(2, 1, &config);
+        encoder.set_loop_count(-1);
+        encoder.add_frame(AnimFrame::from_rgb(&[1, 2, 3, 4, 5, 6], 2, 1, 0));
+        assert!(matches!(
+            encoder.try_encode(),
+            Err(AnimEncodeError::WebPMuxError(_))
+        ));
+    }
+
     #[test]
     fn test_animdecoder_decode_failure_on_invalid_data() {
         let data = vec![0u8; 10];

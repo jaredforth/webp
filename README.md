@@ -1,4 +1,5 @@
 ![Build Status](https://github.com/jaredforth/webp/actions/workflows/rust.yml/badge.svg)
+[![codecov](https://codecov.io/gh/jaredforth/webp/graph/badge.svg)](https://codecov.io/gh/jaredforth/webp)
 [![Crate](https://img.shields.io/crates/v/webp.svg)](https://crates.io/crates/webp)
 [![API](https://docs.rs/webp/badge.svg)](https://docs.rs/webp)
 ![Crates.io](https://img.shields.io/crates/d/webp)
